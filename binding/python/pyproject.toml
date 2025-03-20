@@ -1,0 +1,42 @@
+[build-system]
+requires = ["maturin>=1.8,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "bintensors"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
+dynamic = ["version"]
+authors = [
+    {name = 'Luca Vivona', email = "lucavivona01@gmail.com"}
+]
+
+[project.urls]
+Homepage = 'https://github.com/GnosisFoundation/bintensor'
+Source = 'https://github.com/GnosisFoundation/bintensor'
+
+[tool.maturin]
+python-source = "py"
+module-name = "bintensors._bintensors_rs"
+bindings = 'pyo3'
+features = ["pyo3/extension-module"]
+
+[tool.black]
+line-length = 119
+target-version = ['py35']
