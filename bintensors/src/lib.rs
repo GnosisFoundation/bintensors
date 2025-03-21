@@ -1,11 +1,10 @@
 
 
 #![deny(missing_docs)]
-#![doc = include_str!("../../README.md")]
+#![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 pub mod slice;
 pub mod tensor;
-pub mod id;
 /// serialize_to_file only valid in std
 #[cfg(feature = "std")]
 pub use tensor::serialize_to_file;
