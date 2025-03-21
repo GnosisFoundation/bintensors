@@ -102,7 +102,18 @@ fn prepare(tensor_dict: HashMap<String, PyBound<PyDict>>) -> PyResult<HashMap<St
     Ok(tensors)
 }
 
+/// Serializes raw data.
 ///
+/// Args:
+///     tensor_dict (`Dict[str, Dict[Any]]`):
+///         The tensor dict is like:
+///             {"tensor_name": {"dtype": "F32", "shape": [2, 3], "data": b"\0\0"}}
+///     metadata (`Dict[str, str]`, *optional*):
+///         The optional purely text annotations
+///
+/// Returns:
+///     (`bytes`):
+///         The serialized content.
 #[pyfunction]
 #[pyo3(signature = (tensor_dict, metadata=None))]
 fn serialize<'py>(
@@ -118,7 +129,20 @@ fn serialize<'py>(
     Ok(pybytes)
 }
 
+/// Serializes raw data into file.
 ///
+/// Args:
+///     tensor_dict (`Dict[str, Dict[Any]]`):
+///         The tensor dict is like:
+///             {"tensor_name": {"dtype": "F32", "shape": [2, 3], "data": b"\0\0"}}
+///     filename (`str`, or `os.PathLike`):
+///         The name of the file to write into.
+///     metadata (`Dict[str, str]`, *optional*):
+///         The optional purely text annotations
+///
+/// Returns:
+///     (`NoneType`):
+///         On success return None
 #[pyfunction]
 #[pyo3(signature = (filename, tensor_dict, metadata=None))]
 fn serialize_file(
@@ -133,6 +157,16 @@ fn serialize_file(
 }
 
 
+/// Opens a safetensors lazily and returns tensors as asked
+///
+/// Args:
+///     data (`bytes`):
+///         The byte content of a file
+///
+/// Returns:
+///     (`List[str, Dict[str, Dict[str, any]]]`):
+///         The deserialized content is like:
+///             [("tensor_name", {"shape": [2, 3], "dtype": "F32", "data": b"\0\0.." }), (...)]
 #[pyfunction]
 #[pyo3(signature = (bytes))]
 fn deserialize(py : Python, bytes : &[u8]) -> PyResult<Vec<(String, HashMap<String, PyObject>)>> {
