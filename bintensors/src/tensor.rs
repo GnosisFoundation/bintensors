@@ -15,8 +15,9 @@ const OFFSET: usize = 8;
 /// A Bintensor file.
 #[derive(Debug)]
 pub enum BinTensorError {
-    /// The magic nubmer of the file
-    InvalidMagicNumber,
+    // TODO: possible uncomment when adding a magic number 
+    // /// The magic nubmer of the file
+    // InvalidMagicNumber,
     /// The header is an invalid UTF-8 string and cannot be read.
     InvalidHeader,
     /// The header's first byte is not the expected `{`.
