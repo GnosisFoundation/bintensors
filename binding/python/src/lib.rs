@@ -3,7 +3,7 @@ use pyo3::exceptions::{PyException, PyFileNotFoundError};
 use pyo3::prelude::*;
 use pyo3::sync::OnceLockExt;
 use pyo3::types::IntoPyDict;
-use pyo3::types::{PyBool, PyByteArray, PyBytes, PyDict, PyList, PySlice};
+use pyo3::types::{PyBool, PyByteArray, PyBytes, PyDict, PyList, PySlice, PyTuple};
 use pyo3::Bound as PyBound;
 use pyo3::{intern, PyErr};
 
@@ -129,6 +129,35 @@ fn serialize<'py>(
     Ok(pybytes)
 }
 
+/// Serializes raw data.
+///
+/// Args:
+///     tensor_dict (`Dict[str, Dict[Any]]`):
+///         The tensor dict is like:
+///             {"tensor_name": {"dtype": "F32", "shape": [2, 3], "data": b"\0\0"}}
+///     metadata (`Dict[str, str]`, *optional*):
+///         The optional purely text annotations
+///
+/// Returns:
+///     (`tulpel(bytes, bytes)`):
+///         The serialized content, with a sha1 checksum hash .
+#[pyfunction]
+#[pyo3(signature = (tensor_dict, metadata=None))]
+fn serialize_checksum<'py>(
+    py: Python<'py>,
+    tensor_dict: HashMap<String, PyBound<PyDict>>,
+    metadata: Option<HashMap<String, String>>,
+) -> PyResult<PyBound<'py, PyTuple>> {
+    let tensors = prepare(tensor_dict)?;
+    let metadata_map = metadata.map(HashMap::from_iter);
+    let (id, out) = bintensors::tensor::serialize_with_checksum(&tensors, &metadata_map)
+        .map_err(|e| BinTensorError::new_err(format!("Error while serializing: {e:?}")))?;
+    let bytes = PyBytes::new(py, &out);
+    let id = PyBytes::new(py, &Vec::from(id));
+    let tuple = PyTuple::new(py, &[id, bytes])?;
+    Ok(tuple)
+}
+
 /// Serializes raw data into file.
 ///
 /// Args:
@@ -157,7 +186,7 @@ fn serialize_file(
 }
 
 
-/// Opens a safetensors lazily and returns tensors as asked
+/// Opens a bintensors lazily and returns tensors as asked
 ///
 /// Args:
 ///     data (`bytes`):
@@ -1207,6 +1236,7 @@ pyo3::create_exception!(
 fn _bintensors_rs(m: &PyBound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(serialize, m)?)?;
     m.add_function(wrap_pyfunction!(serialize_file, m)?)?;
+    m.add_function(wrap_pyfunction!(serialize_checksum, m)?)?;
     m.add_function(wrap_pyfunction!(deserialize, m)?)?;
     m.add_class::<safe_open>()?;
     m.add("BintensorError", m.py().get_type::<BinTensorError>())?;

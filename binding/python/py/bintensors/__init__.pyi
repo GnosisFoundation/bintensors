@@ -1,7 +1,7 @@
 @staticmethod
 def deserialize(bytes):
     """
-    Opens a safetensors lazily and returns tensors as asked
+    Opens a bintensors lazily and returns tensors as asked
 
     Args:
         data (`bytes`):
@@ -52,9 +52,27 @@ def serialize_file(tensor_dict, filename, metadata=None):
     """
     pass
 
+@staticmethod
+def serialize_checksum():
+    """
+    Serializes raw data.
+
+    Args:
+        tensor_dict (`Dict[str, Dict[Any]]`):
+            The tensor dict is like:
+             {"tensor_name": {"dtype": "F32", "shape": [2, 3], "data": b"\0\0"}}
+     metadata (`Dict[str, str]`, *optional*):
+         The optional purely text annotations
+
+     Returns:
+        (`tulpel(bytes, bytes)`):
+            The serialized content, with a sha1 checksum hash .
+    """
+    pass
+
 class safe_open:
     """
-    Opens a safetensors lazily and returns tensors as asked
+    Opens a bintensors lazily and returns tensors as asked
 
     Args:
         filename (`str`, or `os.PathLike`):
@@ -96,9 +114,9 @@ class safe_open:
                 A dummy object you can slice into to get a real tensor
         Example:
         ```python
-        from safetensors import safe_open
+        from bintensors import safe_open
 
-        with safe_open("model.safetensors", framework="pt", device=0) as f:
+        with safe_open("model.bintensors", framework="pt", device=0) as f:
             tensor_part = f.get_slice("embedding")[:, ::8]
 
         ```
@@ -119,9 +137,9 @@ class safe_open:
 
         Example:
         ```python
-        from safetensors import safe_open
+        from bintensors import safe_open
 
-        with safe_open("model.safetensors", framework="pt", device=0) as f:
+        with safe_open("model.bintensors", framework="pt", device=0) as f:
             tensor = f.get_tensor("embedding")
 
         ```

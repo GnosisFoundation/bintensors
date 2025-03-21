@@ -1,10 +1,13 @@
 import os
 import sys
+import importlib
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-from bintensors import deserialize, safe_open, serialize, serialize_file
 
+from bintensors import deserialize, safe_open, serialize, serialize_file, serialize_checksum
+
+# ensures that torch is installed
 try:
     import torch
 except ImportError:
@@ -110,7 +113,7 @@ def _remove_duplicate_names(
                 "Error while trying to find names to remove to save state dict, but found no suitable name to keep"
                 f" for saving amongst: {shared}. None is covering the entire storage.Refusing to save/load the model"
                 " since you could be storing much more memory than needed. Please refer to"
-                " https://huggingface.co/docs/safetensors/torch_shared_tensors for more information. Or open an"
+                " https://huggingface.co/docs/bintensors/torch_shared_tensors for more information. Or open an"
                 " issue."
             )
 
@@ -140,7 +143,7 @@ def save_model(
     """
     Saves a given torch model to specified filename.
     This method exists specifically to avoid tensor sharing issues which are
-    not allowed in `safetensors`. [More information on tensor sharing](../torch_shared_tensors)
+    not allowed in `bintensors`. [More information on tensor sharing](../torch_shared_tensors)
 
     Args:
         model (`torch.nn.Module`):
@@ -186,7 +189,7 @@ def load_model(
     """
     Loads a given filename onto a torch model.
     This method exists specifically to avoid tensor sharing issues which are
-    not allowed in `safetensors`. [More information on tensor sharing](../torch_shared_tensors)
+    not allowed in `bintensors`. [More information on tensor sharing](../torch_shared_tensors)
 
     Args:
         model (`torch.nn.Module`):
@@ -231,7 +234,7 @@ def load_model(
 
 def save(tensors: Dict[str, torch.Tensor], metadata: Optional[Dict[str, str]] = None) -> bytes:
     """
-    Saves a dictionary of tensors into raw bytes in safetensors format.
+    Saves a dictionary of tensors into raw bytes in bintensors format.
 
     Args:
         tensors (`Dict[str, torch.Tensor]`):
@@ -259,13 +262,45 @@ def save(tensors: Dict[str, torch.Tensor], metadata: Optional[Dict[str, str]] = 
     return result
 
 
+def save_with_checksum(
+    tensors: Dict[str, torch.Tensor], metadata: Optional[Dict[str, str]] = None
+) -> Tuple[bytes, bytes]:
+    """
+    Saves a dictionary of tensors into raw bytes in bintensors format.
+
+    Args:
+        tensors (`Dict[str, torch.Tensor]`):
+            The incoming tensors. Tensors need to be contiguous and dense.
+        metadata (`Dict[str, str]`, *optional*, defaults to `None`):
+            Optional text only metadata you might want to save in your header.
+            For instance it can be useful to specify more about the underlying
+            tensors. This is purely informative and does not affect tensor loading.
+
+    Returns:
+        `bytes`: The raw bytes representing the format
+
+    Example:
+
+    ```python
+    from bintensors.torch import save
+    import torch
+
+    tensors = {"embedding": torch.zeros((512, 1024)), "attention": torch.zeros((256, 256))}
+    checksum, byte_data = save_with_checksum(tensors)
+    ```
+    """
+    checksum, serialized = serialize_checksum(_flatten(tensors), metadata=metadata)
+    result = bytes(checksum), bytes(serialized)
+    return result
+
+
 def save_file(
     tensors: Dict[str, torch.Tensor],
     filename: Union[str, os.PathLike],
     metadata: Optional[Dict[str, str]] = None,
 ):
     """
-    Saves a dictionary of tensors into raw bytes in safetensors format.
+    Saves a dictionary of tensors into raw bytes in bintensors format.
 
     Args:
         tensors (`Dict[str, torch.Tensor]`):
@@ -295,7 +330,7 @@ def save_file(
 
 def load_file(filename: Union[str, os.PathLike], device: Union[str, int] = "cpu") -> Dict[str, torch.Tensor]:
     """
-    Loads a safetensors file into torch format.
+    Loads a bintensors file into torch format.
 
     Args:
         filename (`str`, or `os.PathLike`):
@@ -325,11 +360,11 @@ def load_file(filename: Union[str, os.PathLike], device: Union[str, int] = "cpu"
 
 def load(data: bytes) -> Dict[str, torch.Tensor]:
     """
-    Loads a safetensors file into torch format from pure bytes.
+    Loads a bintensors file into torch format from pure bytes.
 
     Args:
         data (`bytes`):
-            The content of a safetensors file
+            The content of a bintensors file
 
     Returns:
         `Dict[str, torch.Tensor]`: dictionary that contains name as key, value as `torch.Tensor` on cpu
@@ -496,7 +531,7 @@ def _flatten(tensors: Dict[str, torch.Tensor]) -> Dict[str, Dict[str, Any]]:
             f"""
             Some tensors share memory, this will lead to duplicate memory on disk and potential differences when loading them again: {failing}.
             A potential way to correctly save your model is to use `save_model`.
-            More information at https://huggingface.co/docs/safetensors/torch_shared_tensors
+            More information at https://huggingface.co/docs/bintensors/torch_shared_tensors
             """
         )
 
