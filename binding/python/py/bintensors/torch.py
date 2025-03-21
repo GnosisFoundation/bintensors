@@ -7,6 +7,7 @@ import torch
 
 from bintensors import deserialize, safe_open, serialize, serialize_file
 
+__all__ = ["save_model", "save", "save_file", "load_model", "load", "load_file"]
 
 def storage_ptr(tensor: torch.Tensor) -> int:
     try:
@@ -283,8 +284,7 @@ def save_file(
     save_file(tensors, "model.bintensors")
     ```
     """
-    p = serialize_file(filename, _flatten(tensors), metadata=metadata)
-    print(p)
+    serialize_file(filename, _flatten(tensors), metadata=metadata)
 
 
 def load_file(filename: Union[str, os.PathLike], device: Union[str, int] = "cpu") -> Dict[str, torch.Tensor]:
