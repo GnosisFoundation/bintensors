@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, Tuple
 
 
 try:
@@ -176,21 +176,6 @@ def load_file(filename: Union[str, os.PathLike]) -> Dict[str, np.ndarray]:
 # np.float8 formats require 2.1; we do not support these dtypes on earlier versions
 _float8_e4m3fn = getattr(np, "float8_e4m3fn", None)
 _float8_e5m2 = getattr(np, "float8_e5m2", None)
-
-_SIZE = {
-    np.int64: 8,
-    np.float32: 4,
-    np.int32: 4,
-    np.bfloat16: 2,
-    np.float16: 2,
-    np.int16: 2,
-    np.uint8: 1,
-    np.int8: 1,
-    np.bool: 1,
-    np.float64: 8,
-    _float8_e4m3fn: 1,
-    _float8_e5m2: 1,
-}
 
 _TYPES = {
     "F64": np.float64,
