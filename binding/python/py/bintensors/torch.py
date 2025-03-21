@@ -3,11 +3,17 @@ import sys
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-import torch
-
 from bintensors import deserialize, safe_open, serialize, serialize_file
 
+try:
+    import torch
+except ImportError:
+    raise ImportError(
+        "Could not find the 'torch' module. To use this part of the package, please install torch: `pip install torch`."
+    )
+
 __all__ = ["save_model", "save", "save_file", "load_model", "load", "load_file"]
+
 
 def storage_ptr(tensor: torch.Tensor) -> int:
     try:
