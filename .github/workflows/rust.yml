@@ -1,0 +1,53 @@
+name: Rust
+
+on:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        toolchain: [stable]
+        include:
+          - os: ubuntu-latest
+            toolchain: "1.74"
+    defaults:
+      run:
+        working-directory: ./bintensors
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust Stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+          override: true
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Build
+        run: cargo build --all-targets --verbose
+
+      - name: Lint with Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Run Tests
+        run: cargo test --verbose
+
+      # TODO: uncomment when No-STD is completely stable, with bincode
+      # - name: Run No-STD Tests
+        # run: cargo test --no-default-features --features alloc --verbose
+
+      - name: Run Audit
+        # RUSTSEC-2021-0145 is criterion so only within benchmarks
+        run: cargo audit -D warnings --ignore RUSTSEC-2021-0145
+
+
+
