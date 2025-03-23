@@ -1,6 +1,5 @@
 import os
 import sys
-import importlib
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
@@ -289,8 +288,9 @@ def save_with_checksum(
     checksum, byte_data = save_with_checksum(tensors)
     ```
     """
-    checksum, serialized = serialize_checksum(_flatten(tensors), metadata=metadata)
-    result = bytes(checksum), bytes(serialized)
+
+    checksum, buffer = serialize_checksum(tensors, metadata)
+    result = bytes(checksum), bytes(buffer)
     return result
 
 
