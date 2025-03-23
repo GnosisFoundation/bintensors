@@ -1,5 +1,6 @@
 //! Module Containing the most important structures
-use crate::id::ObjectId;
+// #[cfg(feature = "crypto")]
+use crate::oid::ObjectId;
 use crate::lib::{Cow, HashMap, String, ToString, Vec};
 use crate::slice::{InvalidSlice, SliceIterator, TensorIndexer};
 use bincode::{Decode, Encode};
@@ -15,7 +16,7 @@ const OFFSET: usize = 8;
 /// A Bintensor file.
 #[derive(Debug)]
 pub enum BinTensorError {
-    // TODO: possible uncomment when adding a magic number 
+    // TODO: possible uncomment when adding a magic number
     // /// The magic nubmer of the file
     // InvalidMagicNumber,
     /// The header is an invalid UTF-8 string and cannot be read.
@@ -211,9 +212,10 @@ fn prepare<S: AsRef<str> + Ord + core::fmt::Display, V: View, I: IntoIterator<It
 
     let metadata: Metadata = Metadata::new(data_info.clone(), hmetadata)?;
     let mut metadata_buf = bincode::encode_to_vec(metadata, bincode::config::standard())?;
-    // Force alignment to 8 bytes.
+    // Force alignment to 8 bytes with padding.
     let extra = (8 - metadata_buf.len() % 8) % 8;
-    metadata_buf.extend(vec![b' '; extra]);
+    let padding = vec![b' '; extra];
+    metadata_buf.extend(padding);
 
     let n: u64 = metadata_buf.len() as u64;
 
@@ -283,7 +285,8 @@ pub fn serialize_to_file<
     Ok(())
 }
 
-/// Serialize to an owned byte buffer the dictionnary of tensors, 
+// #[cfg(feature = "crypto")]
+/// Serialize to an owned byte buffer the dictionnary of tensors,
 /// with a checksum idendity
 pub fn serialize_with_checksum<
     S: AsRef<str> + Ord + core::fmt::Display,
@@ -295,7 +298,9 @@ pub fn serialize_with_checksum<
 ) -> Result<(ObjectId, Vec<u8>), BinTensorError> {
     let (
         PreparedData {
-            n, header_bytes, offset
+            n,
+            header_bytes,
+            offset,
         },
         tensors,
     ) = prepare(data, data_info)?;
@@ -351,8 +356,10 @@ impl<'data> BinTensors<'data> {
             return Err(BinTensorError::InvalidHeaderLength);
         }
 
-        let (metadata, _): (Metadata, _) =
-            bincode::decode_from_slice(&buffer[OFFSET..stop], bincode::config::standard())?;
+        let (metadata, _): (Metadata, _) = bincode::decode_from_slice(
+            &buffer[OFFSET..stop],
+            bincode::config::standard().with_limit::<{ MAX_HEADER_SIZE }>(),
+        )?;
         let buffer_end = metadata.validate()?;
         if buffer_end + OFFSET + n != buffer_len {
             return Err(BinTensorError::MetadataIncompleteBuffer);
@@ -369,7 +376,7 @@ impl<'data> BinTensors<'data> {
     ///
     /// let filename = "model.bintensors";
     /// # use std::io::Write;
-    /// # let serialized = b"<\x00\x00\x00\x00\x00\x00\x00{\"test\":{\"dtype\":\"I32\",\"shape\":[2,2],\"data_offsets\":[0,16]}}\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+    /// # let serialized = b"\x10\x00\x00\x00\x00\x00\x00\x00\x00\x01\x09\x02\x01\x04\x00\x10\x01\x04\x74\x65\x73\x74\x00\x20\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
     /// # File::create(filename).unwrap().write(serialized).unwrap();
     /// let file = File::open(filename).unwrap();
     /// let buffer = unsafe { MmapOptions::new().map(&file).unwrap() };
@@ -900,7 +907,7 @@ mod tests {
             ]
         );
         let _parsed = BinTensors::deserialize(&out).unwrap();
-        println!("{:?}", _parsed);
+        // println!("{:?}", _parsed);
     }
 
     #[test]
@@ -938,7 +945,7 @@ mod tests {
         let metadata: HashMap<String, TensorView> =
                 // Smaller string to force misalignment compared to previous test.
                 [("attn0".to_string(), attn_0)].into_iter().collect();
-        println!("{:?} {:?}", Dtype::F32.size(), metadata);
+        // println!("{:?} {:?}", Dtype::F32.size(), metadata);
         let out = serialize(&metadata, &None).unwrap();
         assert_eq!(
             out,
@@ -1071,52 +1078,36 @@ mod tests {
         }
     }
 
-    // #[test]
-    // fn test_empty_shapes_allowed() {
-
-    //     let serialized = b"8\x00\x00\x00\x00\x00\x00\x00{\"test\":{\"dtype\":\"I32\",\"shape\":[],\"data_offsets\":[0,4]}}\x00\x00\x00\x00";
-
-    //     let loaded = BinTensors::deserialize(serialized).unwrap();
-    //     assert_eq!(loaded.names(), vec!["test"]);
-    //     let tensor = loaded.tensor("test").unwrap();
-    //     assert!(tensor.shape().is_empty());
-    //     assert_eq!(tensor.dtype(), Dtype::I32);
-    //     // 4 bytes
-    //     assert_eq!(tensor.data(), b"\0\0\0\0");
-    // }
-
-    //     #[test]
-    //     fn test_deserialization() {
-    //         let serialized = b"<\x00\x00\x00\x00\x00\x00\x00{\"test\":{\"dtype\":\"I32\",\"shape\":[2,2],\"data_offsets\":[0,16]}}\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-
-    //         let loaded = BinTensors::deserialize(serialized).unwrap();
-
-    //         assert_eq!(loaded.len(), 1);
-    //         assert_eq!(loaded.names(), vec!["test"]);
-    //         let tensor = loaded.tensor("test").unwrap();
-    //         assert_eq!(tensor.shape(), vec![2, 2]);
-    //         assert_eq!(tensor.dtype(), Dtype::I32);
-    //         // 16 bytes
-    //         assert_eq!(tensor.data(), b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
-    //     }
-
-    //     #[test]
-    //     fn test_lifetimes() {
-    //         let serialized = b"<\x00\x00\x00\x00\x00\x00\x00{\"test\":{\"dtype\":\"I32\",\"shape\":[2,2],\"data_offsets\":[0,16]}}\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-
-    //         let tensor = {
-    //             let loaded = BinTensors::deserialize(serialized).unwrap();
-    //             loaded.tensor("test").unwrap()
-    //         };
-
-    //         assert_eq!(tensor.shape(), vec![2, 2]);
-    //         assert_eq!(tensor.dtype(), Dtype::I32);
-    //         // 16 bytes
-    //         assert_eq!(tensor.data(), b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
-    //     }
+    #[test]
+    fn test_deserialization() {
+        let serialized = b"\x10\x00\x00\x00\x00\x00\x00\x00\x00\x01\x09\x02\x01\x04\x00\x10\x01\x04\x74\x65\x73\x74\x00\x20\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+        let loaded = BinTensors::deserialize(serialized).unwrap();
+        assert_eq!(loaded.names(), vec!["test"]);
+        let tensor = loaded.tensor("test").unwrap();
+        assert!(!tensor.shape().is_empty());
+        assert_eq!(tensor.dtype(), Dtype::I32);
+        // 16 bytes
+        assert_eq!(tensor.data(), b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
+    }
 
     #[test]
-    fn test_json_attack() {
+    fn test_lifetimes() {
+        let serialized = b"\x10\x00\x00\x00\x00\x00\x00\x00\x00\x01\x09\x02\x01\x04\x00\x10\x01\x04\x74\x65\x73\x74\x00\x20\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+
+
+        let tensor = {
+            let loaded = BinTensors::deserialize(serialized).unwrap();
+            loaded.tensor("test").unwrap()
+        };
+
+        assert_eq!(tensor.shape(), vec![1, 4]);
+        assert_eq!(tensor.dtype(), Dtype::I32);
+        // 16 bytes
+        assert_eq!(tensor.data(), b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
+    }
+
+    #[test]
+    fn test_offset_attack() {
         let mut tensors = HashMap::new();
         let dtype = Dtype::F32;
         let shape = vec![2, 2];
@@ -1151,37 +1142,44 @@ mod tests {
         match BinTensors::deserialize(&reloaded) {
             Err(BinTensorError::DecoderError(_)) => {
                 // Yes we have the correct error
+                std::fs::remove_file(filename).unwrap();
             }
             Err(err) => panic!("Unexpected error {err:?}"),
             Ok(_) => panic!("This should not be able to be deserialized"),
         }
     }
 
-    // #[test]
-    // fn test_metadata_incomplete_buffer() {
-    //     let serialized = b"<\x00\x00\x00\x00\x00\x00\x00{\"test\":{\"dtype\":\"I32\",\"shape\":[2,2],\"data_offsets\":[0,16]}}\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00extra_bogus_data_for_polyglot_file";
+    #[test]
+    fn test_metadata_incomplete_buffer() {
+        let serialized = b"\x10\x00\x00\x00\x00\x00\x00\x00\x00\x01\x09\x02\x01\x04\x00\x10\x01\x04\x74\x65\x73\x74\x00\x20\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0hello_world";
 
-    //     match BinTensors::deserialize(serialized) {
-    //         Err(BinTensorError::MetadataIncompleteBuffer) => {
-    //             // Yes we have the correct error
-    //         }
-    //         _ => panic!("This should not be able to be deserialized"),
-    //     }
+        match BinTensors::deserialize(serialized) {
+            Err(BinTensorError::MetadataIncompleteBuffer) => {
+                // Yes we have the correct error
+            }
+            Err(BinTensorError::DecoderError(_)) => {
+                // Yes we have the correct error
+            },
+            _ => panic!("This should not be able to be deserialized"),
+        }
 
-    //     // Missing data in the buffer
-    //     let serialized = b"<\x00\x00\x00\x00\x00\x00\x00{\"test\":{\"dtype\":\"I32\",\"shape\":[2,2],\"data_offsets\":[0,16]}}\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"; // <--- missing 2 bytes
+        // Missing data in the buffer
+        let serialized = b"\x10\x00\x00\x00\x00\x00\x00\x00\x01\x09\x02\x04\x74\x65\x73\x00\x20\0\0\0\0\0\0\0\0\0\0\0\0\0\0"; // <--- missing 2 bytes
 
-    //     match BinTensors::deserialize(serialized) {
-    //         Err(BinTensorError::MetadataIncompleteBuffer) => {
-    //             // Yes we have the correct error
-    //         }
-    //         _ => panic!("This should not be able to be deserialized"),
-    //     }
-    // }
+        match BinTensors::deserialize(serialized) {
+            Err(BinTensorError::MetadataIncompleteBuffer) => {
+                // Yes we have the correct error
+            }
+            Err(BinTensorError::DecoderError(_)) => {
+                // Yes we have the correct error
+            },
+            _ => panic!("This should not be able to be deserialized"),
+        }
+    }
 
     #[test]
     fn test_header_too_large() {
-        let serialized = b"<\x00\x00\x00\x00\xff\xff\xff{\"test\":{\"dtype\":\"I32\",\"shape\":[2,2],\"data_offsets\":[0,16]}}\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+        let serialized = b"\x10\x00\x00\x00\xFF\xFF\xFF\xFF\x00\x01\x09\x02\x01\x04\x00\x10\x01\x04\x74\x65\x73\x74\x00\x20\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
 
         match BinTensors::deserialize(serialized) {
             Err(BinTensorError::HeaderTooLarge) => {
@@ -1224,80 +1222,5 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_invalid_header_not_json() {
-        let serialized = b"\x01\x00\x00\x00\x00\x00\x00\x00{";
-        match BinTensors::deserialize(serialized) {
-            Err(BinTensorError::DecoderError(_)) => {
-                // Yes we have the correct error
-            }
-            _ => panic!("This should not be able to be deserialized"),
-        }
-    }
 
-    // #[test]
-    // /// Test that the JSON header may be trailing-padded with JSON whitespace characters.
-    // fn test_whitespace_padded_header() {
-    //     let serialized = b"\x06\x00\x00\x00\x00\x00\x00\x00{}\x0D\x20\x09\x0A";
-    //     let loaded = BinTensors::deserialize(serialized).unwrap();
-    //     assert_eq!(loaded.len(), 0);
-    // }
-
-    //     // Reserver for 0.4.0
-    //     // #[test]
-    //     // /// Test that the JSON header must begin with a `{` character.
-    //     // fn test_whitespace_start_padded_header_is_not_allowed() {
-    //     //     let serialized = b"\x06\x00\x00\x00\x00\x00\x00\x00\x09\x0A{}\x0D\x20";
-    //     //     match BinTensors::deserialize(serialized) {
-    //     //         Err(BinTensorError::InvalidHeaderStart) => {
-    //     //             // Correct error
-    //     //         }
-    //     //         _ => panic!("This should not be able to be deserialized"),
-    //     //     }
-    //     // }
-
-    //     #[test]
-    //     fn test_zero_sized_tensor() {
-    //         let serialized = b"<\x00\x00\x00\x00\x00\x00\x00{\"test\":{\"dtype\":\"I32\",\"shape\":[2,0],\"data_offsets\":[0, 0]}}";
-    //         let loaded = BinTensors::deserialize(serialized).unwrap();
-
-    //         assert_eq!(loaded.names(), vec!["test"]);
-    //         let tensor = loaded.tensor("test").unwrap();
-    //         assert_eq!(tensor.shape(), vec![2, 0]);
-    //         assert_eq!(tensor.dtype(), Dtype::I32);
-    //         assert_eq!(tensor.data(), b"");
-    //     }
-
-    //     #[test]
-    //     fn test_invalid_info() {
-    //         let serialized = b"<\x00\x00\x00\x00\x00\x00\x00{\"test\":{\"dtype\":\"I32\",\"shape\":[2,2],\"data_offsets\":[0, 4]}}";
-    //         match BinTensors::deserialize(serialized) {
-    //             Err(BinTensorError::TensorInvalidInfo) => {
-    //                 // Yes we have the correct error
-    //             }
-    //             _ => panic!("This should not be able to be deserialized"),
-    //         }
-    //     }
-
-    //     #[test]
-    //     fn test_validation_overflow() {
-    //         // u64::MAX =  18_446_744_073_709_551_615u64
-    //         // Overflow the shape calculation.
-    //         let serialized = b"O\x00\x00\x00\x00\x00\x00\x00{\"test\":{\"dtype\":\"I32\",\"shape\":[2,18446744073709551614],\"data_offsets\":[0,16]}}\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-    //         match BinTensors::deserialize(serialized) {
-    //             Err(BinTensorError::ValidationOverflow) => {
-    //                 // Yes we have the correct error
-    //             }
-    //             _ => panic!("This should not be able to be deserialized"),
-    //         }
-    //         // u64::MAX =  18_446_744_073_709_551_615u64
-    //         // Overflow the num_elements * total shape.
-    //         let serialized = b"N\x00\x00\x00\x00\x00\x00\x00{\"test\":{\"dtype\":\"I32\",\"shape\":[2,9223372036854775807],\"data_offsets\":[0,16]}}\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-    //         match BinTensors::deserialize(serialized) {
-    //             Err(BinTensorError::ValidationOverflow) => {
-    //                 // Yes we have the correct error
-    //             }
-    //             _ => panic!("This should not be able to be deserialized"),
-    //         }
-    //     }
 }

@@ -1,8 +1,6 @@
 //! Module Containing verification structure
 use sha1::{Digest, Sha1};
 
-use crate::tensor::TensorView;
-
 #[cfg(feature = "std")]
 use std::{io::Write, io, fmt};
 
@@ -10,7 +8,16 @@ use std::{io::Write, io, fmt};
 use core::{io::Write, io, fmt};
 
 
-macro_rules! hex {
+#[allow(unused_macros)]
+/// Converts a byte slice to a hexadecimal string representation.
+///
+/// # Arguments
+/// 
+/// * `$buf` - A byte slice (`&[u8]`) to be converted to a hexadecimal string.
+///
+/// # Returns
+/// A `String` containing the hexadecimal representation of the input byte slice.
+macro_rules! bytes_to_hex {
     ($buf:expr) => {{
         let bytes: &[u8] = $buf.as_ref();
         bytes.iter().map(|b| format!("{:02x}", b)).collect::<String>()
@@ -97,39 +104,15 @@ impl From<ObjectId> for Vec<u8> {
 impl fmt::Display for ObjectId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::SHA1(b) => write!(f, "{}", hex!(b))
+            Self::SHA1(b) => write!(f, "{}", bytes_to_hex!(b))
         }
     }
 }
 
 
-#[allow(unused_macros)]
-/// Converts a byte slice to a hexadecimal string representation.
-///
-/// # Example
-/// 
-/// ```
-/// let data = [0x1, 0x2, 0x3];
-/// let hex_string = hex!(data);
-/// assert_eq!(hex_string, "010203");
-/// ```
-///
-/// # Arguments
-/// 
-/// * `$buf` - A byte slice (`&[u8]`) to be converted to a hexadecimal string.
-///
-/// # Returns
-/// A `String` containing the hexadecimal representation of the input byte slice.
-macro_rules! hex {
-    ($buf:expr) => {{
-        let bytes: &[u8] = $buf.as_ref();
-        bytes.iter().map(|b| write!("{:02x}", b)).collect::<String>()
-    }};
-}
-
 #[cfg(test)]
 mod test {
-    use crate::id::ObjectId;
+    use crate::oid::ObjectId;
 
     #[cfg(feature = "std")]
     use std::io::Cursor;
