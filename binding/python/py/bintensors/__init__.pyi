@@ -39,8 +39,7 @@ def serialize_file(tensor_dict, filename, metadata=None):
 
     Args:
         tensor_dict (`Dict[str, Dict[Any]]`):
-            The tensor dict is like:
-                {"tensor_name": {"dtype": "F32", "shape": [2, 3], "data": b"\0\0"}}
+            Dictorary of tensor data types, and there assoisated layer key
         filename (`str`, or `os.PathLike`):
             The name of the file to write into.
         metadata (`Dict[str, str]`, *optional*):
@@ -48,7 +47,7 @@ def serialize_file(tensor_dict, filename, metadata=None):
 
     Returns:
         (`NoneType`):
-            On success return None.
+            On success return `None`.
     """
     pass
 
@@ -66,7 +65,7 @@ def serialize_checksum():
 
      Returns:
         (`tulpel(bytes, bytes)`):
-            The serialized content, with a sha1 checksum hash .
+            The serialized content, with a sha1 checksum hash.
     """
     pass
 
