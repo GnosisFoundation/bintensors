@@ -150,12 +150,13 @@ fn serialize_checksum<'py>(
 ) -> PyResult<PyBound<'py, PyTuple>> {
     let tensors = prepare(tensor_dict)?;
     let metadata_map = metadata.map(HashMap::from_iter);
-    let (id, out) = bintensors::tensor::serialize_with_checksum(&tensors, &metadata_map)
+    let (checksum, out) = bintensors::tensor::serialize_with_checksum(&tensors, &metadata_map)
         .map_err(|e| BinTensorError::new_err(format!("Error while serializing: {e:?}")))?;
-    let bytes = PyBytes::new(py, &out);
-    let id = PyBytes::new(py, &Vec::from(id));
-    let tuple = PyTuple::new(py, &[id, bytes])?;
-    Ok(tuple)
+    
+    Ok(PyTuple::new(py, &[
+        PyBytes::new(py, &Vec::from(checksum)),
+        PyBytes::new(py, &out)
+    ])?)
 }
 
 /// Serializes raw data into file.
