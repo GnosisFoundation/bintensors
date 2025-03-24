@@ -14,16 +14,16 @@ fn get_sample_data() -> (Vec<u8>, Vec<usize>, Dtype) {
 
 pub fn bench_serialize(c: &mut Criterion) {
     let (data, shape, dtype) = get_sample_data();
-    let n_layers = 5;
+    let n_layers = 500;
 
     let mut metadata: HashMap<String, TensorView> = HashMap::new();
-    // 2_MB x 5 = 10_MB
+    // 2_MB x 500 = 1000_MB
     for i in 0..n_layers {
         let tensor = TensorView::new(dtype, shape.clone(), &data[..]).unwrap();
         metadata.insert(format!("weight{i}"), tensor);
     }
 
-    c.bench_function("Serialize 10_MB", |b| {
+    c.bench_function("Serialize 1000_MB", |b| {
         b.iter(|| {
             let _serialized = serialize(black_box(&metadata), black_box(&None));
         })
@@ -32,7 +32,7 @@ pub fn bench_serialize(c: &mut Criterion) {
 
 pub fn bench_deserialize(c: &mut Criterion) {
     let (data, shape, dtype) = get_sample_data();
-    let n_layers = 5;
+    let n_layers = 500;
 
     let mut metadata: HashMap<String, TensorView> = HashMap::new();
     // 2_MB x 5 = 10_MB
@@ -43,7 +43,7 @@ pub fn bench_deserialize(c: &mut Criterion) {
 
     let out = serialize(&metadata, &None).unwrap();
 
-    c.bench_function("Deserialize 10_MB", |b| {
+    c.bench_function("Deserialize 1000_MB", |b| {
         b.iter(|| {
             let _deserialized = BinTensors::deserialize(black_box(&out)).unwrap();
         })
