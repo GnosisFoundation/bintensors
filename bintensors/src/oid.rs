@@ -1,11 +1,12 @@
 //! Module Containing verification structure
+use crate::lib::{Vec, String};
 use sha1::{Digest, Sha1};
 
 #[cfg(feature = "std")]
 use std::{io::Write, io, fmt};
 
-#[cfg(not(feature = "std"))]
-use core::{io::Write, io, fmt};
+// #[cfg(not(feature = "std"))]
+// use core::fmt;
 
 
 #[allow(unused_macros)]
@@ -49,12 +50,16 @@ impl ObjectId {
 
 impl ObjectId {
 
+
     /// Write hash id into writer trait.
+    #[cfg(feature = "std")]
+    #[inline]
     pub fn write<W : Write>(&self, writer : &mut W) -> io::Result<()> {
         write!(writer, "{}", self)
     }
 
     /// Segments the hashed id into prefix, and suffix.
+    #[inline]
     pub fn segment(&self) -> (&[u8], &[u8]) {
         match self {
             Self::SHA1(bytes) => (&bytes[0..2], &bytes[2..])
@@ -113,12 +118,11 @@ impl fmt::Display for ObjectId {
 #[cfg(test)]
 mod test {
     use crate::oid::ObjectId;
+    use crate::lib::*;
 
     #[cfg(feature = "std")]
     use std::io::Cursor;
 
-    #[cfg(not(feature = "std"))]
-    use core::io::Cursor;
 
     #[test]
     fn test_sh1_haser_basic() {
@@ -138,6 +142,7 @@ mod test {
         assert_eq!(hash.to_string(), "3becb03b015ed48050611c8d7afe4b88f70d5a20"); // SHA1 of "你好，世界"
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_sha1_write() {
         let hash = ObjectId::sha1(b"test data");

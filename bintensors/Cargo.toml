@@ -18,10 +18,11 @@ criterion = "0.5"
 memmap2 = "0.9"
 proptest = "1.4"
 
+
 [features]  
 default = ["std"]
 std = ["serde/default", "bincode/default", "sha1/default"]
-alloc = ["serde/alloc", "bincode/alloc"]
+# alloc = ["serde/alloc", "bincode/alloc", "hashbrown"]
 
 [[bench]]
 name = "benchmark"

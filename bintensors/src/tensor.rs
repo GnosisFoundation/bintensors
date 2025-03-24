@@ -1,7 +1,7 @@
 //! Module Containing the most important structures
 // #[cfg(feature = "crypto")]
-use crate::oid::ObjectId;
 use crate::lib::{Cow, HashMap, String, ToString, Vec};
+use crate::oid::ObjectId;
 use crate::slice::{InvalidSlice, SliceIterator, TensorIndexer};
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, ser::SerializeMap};
@@ -375,15 +375,17 @@ impl<'data> BinTensors<'data> {
     /// use std::fs::File;
     ///
     /// let filename = "model.bintensors";
-    /// # use std::io::Write;
-    /// # let serialized = b"\x10\x00\x00\x00\x00\x00\x00\x00\x00\x01\x09\x02\x01\x04\x00\x10\x01\x04\x74\x65\x73\x74\x00\x20\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
-    /// # File::create(filename).unwrap().write(serialized).unwrap();
+    /// use std::io::Write;
+    /// let serialized = b"\x10\x00\x00\x00\x00\x00\x00\x00\x00\x01\x09\x02\x01\x04\x00\x10\x01\x04\x74\x65\x73\x74\x00\x20\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+    /// File::create(filename).unwrap().write(serialized).unwrap();
     /// let file = File::open(filename).unwrap();
     /// let buffer = unsafe { MmapOptions::new().map(&file).unwrap() };
     /// let tensors = BinTensors::deserialize(&buffer).unwrap();
     /// let tensor = tensors
-    ///         .tensor("test")
-    ///         .unwrap();
+    ///         .tensor("test");
+    /// // clean up files
+    /// let _ = std::fs::remove_file(filename).unwrap();
+    ///
     /// ```
     pub fn deserialize<'in_data>(buffer: &'in_data [u8]) -> Result<Self, BinTensorError>
     where
@@ -772,6 +774,7 @@ impl Dtype {
 mod tests {
     use super::*;
     use crate::slice::IndexOp;
+    use memmap2::MmapOptions;
     use proptest::prelude::*;
     #[cfg(not(feature = "std"))]
     extern crate std;
@@ -957,8 +960,7 @@ mod tests {
         );
         let parsed = BinTensors::deserialize(&out).unwrap();
         let tensor = parsed.tensor("attn0").unwrap();
-        println!("{:?}", tensor);
-        println!("{:?} {:?}", tensor.data(), tensor.dtype().size());
+
         assert_eq!(tensor.data().as_ptr() as usize % tensor.dtype().size(), 0);
     }
 
@@ -1094,7 +1096,6 @@ mod tests {
     fn test_lifetimes() {
         let serialized = b"\x10\x00\x00\x00\x00\x00\x00\x00\x00\x01\x09\x02\x01\x04\x00\x10\x01\x04\x74\x65\x73\x74\x00\x20\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
 
-
         let tensor = {
             let loaded = BinTensors::deserialize(serialized).unwrap();
             loaded.tensor("test").unwrap()
@@ -1106,6 +1107,7 @@ mod tests {
         assert_eq!(tensor.data(), b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
     }
 
+    #[cfg(feature = "std")]
     #[test]
     fn test_offset_attack() {
         let mut tensors = HashMap::new();
@@ -1159,7 +1161,7 @@ mod tests {
             }
             Err(BinTensorError::DecoderError(_)) => {
                 // Yes we have the correct error
-            },
+            }
             _ => panic!("This should not be able to be deserialized"),
         }
 
@@ -1172,7 +1174,7 @@ mod tests {
             }
             Err(BinTensorError::DecoderError(_)) => {
                 // Yes we have the correct error
-            },
+            }
             _ => panic!("This should not be able to be deserialized"),
         }
     }
@@ -1221,6 +1223,5 @@ mod tests {
             _ => panic!("This should not be able to be deserialized"),
         }
     }
-
 
 }
