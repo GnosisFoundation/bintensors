@@ -1,7 +1,8 @@
 import os
 import sys
-from typing import Dict, Optional, Union, Tuple
-
+import hashlib
+from _hashlib import HASH
+from typing import Dict, Optional, Union, Tuple, Callable
 
 try:
     import numpy as np
@@ -11,7 +12,7 @@ except ImportError:
     )
 
 
-from bintensors import deserialize, safe_open, serialize, serialize_file, serialize_checksum
+from bintensors import deserialize, safe_open, serialize, serialize_file
 
 __all__ = ["save", "save_file", "load", "load_file"]
 
@@ -87,7 +88,9 @@ def save_file(
 
 
 def save_with_checksum(
-    tensor_dict: Dict[str, np.ndarray], metadata: Optional[Dict[str, str]] = None
+    tensor_dict: Dict[str, np.ndarray],
+    metadata: Optional[Dict[str, str]] = None,
+    hasher: Callable[[bytes], HASH] = hashlib.sha224,
 ) -> Tuple[bytes, bytes]:
     """
     Saves a dictionary of tensors into raw bytes in bintensors format.
@@ -99,6 +102,7 @@ def save_with_checksum(
             Optional text only metadata you might want to save in your header.
             For instance it can be useful to specify more about the underlying
             tensors. This is purely informative and does not affect tensor loading.
+        hasher
 
     Returns:
         `bytes`: The raw bytes representing the format
@@ -106,16 +110,16 @@ def save_with_checksum(
     Example:
 
     ```python
-    from bintensors.torch import save
+    from bintensors.torch import save_with_checksum
     import torch
 
     tensors = {"embedding": torch.zeros((512, 1024)), "attention": torch.zeros((256, 256))}
     checksum, byte_data = save_with_checksum(tensors)
     ```
     """
-    flattened = {k: {"dtype": v.dtype.name, "shape": v.shape, "data": _tobytes(v)} for k, v in tensor_dict.items()}
-    checksum, serialized = serialize_checksum(flattened, metadata=metadata)
-    result = bytes(checksum), bytes(serialized)
+    buffer = save(tensor_dict, metadata=metadata)
+    buffer = bytes(buffer)
+    result = hasher(buffer).digest(), buffer
     return result
 
 

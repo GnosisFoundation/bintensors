@@ -5,5 +5,4 @@ from ._bintensors_rs import (
     safe_open,
     serialize,
     serialize_file,
-    serialize_checksum,
 )

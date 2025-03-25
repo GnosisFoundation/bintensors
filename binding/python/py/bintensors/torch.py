@@ -1,10 +1,12 @@
+from __future__ import annotations
 import os
 import sys
+import hashlib
+from _hashlib import HASH
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, Callable
 
-
-from bintensors import deserialize, safe_open, serialize, serialize_file, serialize_checksum
+from bintensors import deserialize, safe_open, serialize, serialize_file
 
 # ensures that torch is installed
 try:
@@ -260,9 +262,39 @@ def save(tensors: Dict[str, torch.Tensor], metadata: Optional[Dict[str, str]] = 
     result = bytes(serialized)
     return result
 
+def save_iter(tensors: Dict[str, torch.Tensor], metadata: Optional[Dict[str, str]] = None):
+    """
+    Saves a dictionary of tensors into raw bytes in bintensors format.
 
+    Args:
+        tensors (`Dict[str, torch.Tensor]`):
+            The incoming tensors. Tensors need to be contiguous and dense.
+        metadata (`Dict[str, str]`, *optional*, defaults to `None`):
+            Optional text only metadata you might want to save in your header.
+            For instance it can be useful to specify more about the underlying
+            tensors. This is purely informative and does not affect tensor loading.
+
+    Returns:
+        `bytes`: The raw bytes representing the format
+
+    Example:
+
+    ```python
+    from bintensors.torch import save_iter
+    import torch
+
+    tensors = {"embedding": torch.zeros((512, 1024)), "attention": torch.zeros((256, 256))}
+    buffer = save_iter(tensors)
+    ```
+    """
+    
+
+# TODO: since this is io bound we want to utilize threading, either
+# within here or within the binding of rust.
 def save_with_checksum(
-    tensors: Dict[str, torch.Tensor], metadata: Optional[Dict[str, str]] = None
+    tensor_dict: Dict[str, torch.Tensor],
+    metadata: Optional[Dict[str, str]] = None,
+    hasher: Callable[[bytes], HASH] = hashlib.sha1,
 ) -> Tuple[bytes, bytes]:
     """
     Saves a dictionary of tensors into raw bytes in bintensors format.
@@ -289,8 +321,9 @@ def save_with_checksum(
     ```
     """
 
-    checksum, buffer = serialize_checksum(tensors, metadata)
-    result = bytes(checksum), bytes(buffer)
+    buffer = save(tensor_dict, metadata=metadata)
+    buffer = bytes(buffer)
+    result = hasher(buffer).digest(), buffer
     return result
 
 
@@ -423,8 +456,8 @@ _TYPES = {
 }
 
 
-def _getdtype(dtype_str: str) -> torch.dtype:
-    return _TYPES[dtype_str]
+def _getdtype(dtype_str: str) -> Optional[torch.dtype]:
+    return _TYPES.get(dtype_str, None)
 
 
 def _view2torch(safeview) -> Dict[str, torch.Tensor]:

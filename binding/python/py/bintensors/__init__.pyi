@@ -51,23 +51,23 @@ def serialize_file(tensor_dict, filename, metadata=None):
     """
     pass
 
-@staticmethod
-def serialize_checksum():
-    """
-    Serializes raw data.
+# @staticmethod
+# def serialize_checksum():
+#     """
+#     Serializes raw data.
 
-    Args:
-        tensor_dict (`Dict[str, Dict[Any]]`):
-            The tensor dict is like:
-             {"tensor_name": {"dtype": "F32", "shape": [2, 3], "data": b"\0\0"}}
-     metadata (`Dict[str, str]`, *optional*):
-         The optional purely text annotations
+#     Args:
+#         tensor_dict (`Dict[str, Dict[Any]]`):
+#             The tensor dict is like:
+#              {"tensor_name": {"dtype": "F32", "shape": [2, 3], "data": b"\0\0"}}
+#      metadata (`Dict[str, str]`, *optional*):
+#          The optional purely text annotations
 
-     Returns:
-        (`tulpel(bytes, bytes)`):
-            The serialized content, with a sha1 checksum hash.
-    """
-    pass
+#      Returns:
+#         (`tulpel(bytes, bytes)`):
+#             The serialized content, with a sha1 checksum hash.
+#     """
+#     pass
 
 class safe_open:
     """
