@@ -1,19 +1,20 @@
 
 <p align="center">
   <picture>
-    <img alt="bintensors" src="https://github.com/GnosisFoundation/bintensors/blob/master/.github/assets/bt_banner.png?token=GHSAT0AAAAAAC54Q7ITCEXHROKSG2JVOPZYZ7A2V3Q" style="max-width: 100%;">
+    <img alt="bintensors" src="https://github.com/GnosisFoundation/bintensors/blob/master/.github/assets/bt_banner.png" style="max-width: 100%;">
   </picture>
 </p>
 
 ---
 
 <p align="center">
-    <a href="https://raw.githubusercontent.com/GnosisFoundation/bintensor/refs/heads/master/LICENCE.md?token=GHSAT0AAAAAAC54Q7ITN2WJ7VTQJ6FSNEHEZ7AZ23Q"><img alt="GitHub" src="https://img.shields.io/badge/licence-MIT Licence-blue"></a>
-    <a href="https://github.com/GnosisFoundation/bintensor/actions/workflows/rust.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/LVivona/canopy/rust.yml?branch=main"></a>
-    <a href="https://crates.io/crates/libcanopy"><img alt="Crates.io Version" src="https://img.shields.io/crates/v/bintensors"></a>
+    <a href="https://raw.githubusercontent.com/GnosisFoundation/bintensors/refs/heads/master/LICENCE.md?token=GHSAT0AAAAAAC54Q7ITN2WJ7VTQJ6FSNEHEZ7AZ23Q"><img alt="GitHub" src="https://img.shields.io/badge/licence-MIT Licence-blue"></a>
+    <a href="https://github.com/GnosisFoundation/bintensors/actions/workflows/rust.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/GnosisFoundation/bintensors/actions/workflows/rust.yml?branch=main&logo=rust"></a>
+    <a href="https://github.com/GnosisFoundation/bintensors/actions/workflows/python.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/GnosisFoundation/bintensors/actions/workflows/python.yml?branch=main&logo=python"></a>
+    <a href="https://crates.io/crates/bintensors"><img alt="Crates.io Version" src="https://img.shields.io/crates/v/bintensors"></a>
     <a href="https://docs.rs/bintensors"><img alt="docs.rs" src="https://img.shields.io/badge/rust-docs.rs-blue?logo=rust"></a>
     <a href="https://pypi.org/project/bintensors/"><img alt="PyPI" src="https://img.shields.io/pypi/v/bintensors"></a>
-    <a href="https://pypi.org/project/bintensors/"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/your-python-package"></a>
+    <a href="https://pypi.org/project/bintensors/"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/bintensors?logo=python"></a>
 </p>
 
 Another file format, to store your models, and tensors.
