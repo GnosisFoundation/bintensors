@@ -1,5 +1,4 @@
 //! Module Containing the most important structures
-// #[cfg(feature = "crypto")]
 use crate::lib::{Cow, HashMap, String, ToString, Vec};
 use crate::oid::ObjectId;
 use crate::slice::{InvalidSlice, SliceIterator, TensorIndexer};
@@ -88,6 +87,17 @@ struct PreparedData {
     n: u64,
     header_bytes: Vec<u8>,
     offset: usize,
+}
+
+impl Encode for PreparedData {
+    fn encode<E: bincode::enc::Encoder>(
+        &self,
+        encoder: &mut E,
+    ) -> Result<(), bincode::error::EncodeError> {
+        bincode::Encode::encode(self.n.to_le_bytes().as_ref(), encoder)?;
+        bincode::Encode::encode(self.header_bytes.as_slice(), encoder)?;
+        Ok(())
+    }
 }
 
 /// The trait necessary to enable bintensors to serialize a tensor
@@ -285,7 +295,6 @@ pub fn serialize_to_file<
     Ok(())
 }
 
-// #[cfg(feature = "crypto")]
 /// Serialize to an owned byte buffer the dictionnary of tensors,
 /// with a checksum idendity
 pub fn serialize_with_checksum<
@@ -774,7 +783,6 @@ impl Dtype {
 mod tests {
     use super::*;
     use crate::slice::IndexOp;
-    use memmap2::MmapOptions;
     use proptest::prelude::*;
     #[cfg(not(feature = "std"))]
     extern crate std;
@@ -1223,5 +1231,4 @@ mod tests {
             _ => panic!("This should not be able to be deserialized"),
         }
     }
-
 }
