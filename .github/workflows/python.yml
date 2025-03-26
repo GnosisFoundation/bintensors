@@ -2,6 +2,8 @@ name: Python
 
 on:
   pull_request:
+  push:
+    branches : ["main"]
 
 jobs:
   build_and_test:
@@ -29,7 +31,7 @@ jobs:
               arch: "x64-freethreaded"
     defaults:
       run:
-        working-directory: ./bindings/python
+        working-directory: ./binding/python
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -46,13 +48,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: "bindings/python"
-
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.version.python }}
-          architecture: ${{ matrix.version.arch }}
+          workspaces: "binding/python"
 
       - name: Lint with RustFmt
         run: cargo fmt -- --check
@@ -63,10 +59,17 @@ jobs:
       - name: Run Audit
         run: cargo audit -D warnings
 
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.version.python }}
+          architecture: ${{ matrix.version.arch }}
+
       - name: Install
         run: |
           pip install -U pip
-          pip install .[numpy]
+          pip install numpy
+          pip install .
 
       - name: Install (torch)
         if: matrix.version.arch != 'x64-freethreaded'
