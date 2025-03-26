@@ -8,8 +8,8 @@
 
 <p align="center">
     <a href="https://github.com/GnosisFoundation/bintensors/blob/master/LICENCE.md"><img alt="GitHub" src="https://img.shields.io/badge/licence-MIT Licence-blue"></a>
-    <a href="https://github.com/GnosisFoundation/bintensors/actions/workflows/rust.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/GnosisFoundation/bintensors/actions/workflows/rust.yml?branch=main&logo=rust"></a>
-    <a href="https://github.com/GnosisFoundation/bintensors/actions/workflows/python.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/GnosisFoundation/bintensors/actions/workflows/python.yml?branch=main&logo=python"></a>
+    <a href="https://github.com/GnosisFoundation/bintensors/actions/workflows/rust.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/GnosisFoundation/bintensors/actions/workflows/rust.yml?branch=master&logo=rust"></a>
+    <a href="https://github.com/GnosisFoundation/bintensors/actions/workflows/python.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/GnosisFoundation/bintensors/actions/workflows/python.yml?branch=master&logo=python"></a>
     <a href="https://crates.io/crates/bintensors"><img alt="Crates.io Version" src="https://img.shields.io/crates/v/bintensors"></a>
     <a href="https://docs.rs/bintensors"><img alt="docs.rs" src="https://img.shields.io/badge/rust-docs.rs-blue?logo=rust"></a>
     <a href="https://pypi.org/project/bintensors/"><img alt="PyPI" src="https://img.shields.io/pypi/v/bintensors"></a>
