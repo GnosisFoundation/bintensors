@@ -1,6 +1,7 @@
 
 
 #![deny(missing_docs)]
+#![doc(html_logo_url = "https://github.com/GnosisFoundation/bintensors/blob/master/.github/assets/bintensors-logo.png")]
 #![doc = include_str!("../README.md")]
 #![allow(clippy::empty_docs)] //TODO: remove when readme added
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -19,8 +20,8 @@ pub use tensor::{serialize, Dtype, BinTensorError, BinTensors, View};
 
 // #[cfg(all(feature = "std", feature = "alloc"))]
 // compile_error!("must choose either the `std` or `alloc` feature, but not both.");
-// #[cfg(all(not(feature = "std"), not(feature = "alloc")))]
-// compile_error!("must choose either the `std` or `alloc` feature");
+#[cfg(not(feature = "std"))]
+compile_error!("must have the `std` feature");
 
 
 /// A facade around all the types we need from the `std`, `core`, and `alloc`

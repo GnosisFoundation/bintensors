@@ -1,14 +1,13 @@
-
 <p align="center">
   <picture>
-    <img alt="bintensors" src="https://github.com/GnosisFoundation/bintensors/blob/master/.github/assets/bt_banner.png" style="max-width: 100%;">
+    <img alt="bintensors" src="https://github.com/GnosisFoundation/bintensors/blob/master/.github/assets/bt_banner.png?raw=true" style="max-width: 100%;">
   </picture>
 </p>
 
 ---
 
 <p align="center">
-    <a href="https://raw.githubusercontent.com/GnosisFoundation/bintensors/refs/heads/master/LICENCE.md?token=GHSAT0AAAAAAC54Q7ITN2WJ7VTQJ6FSNEHEZ7AZ23Q"><img alt="GitHub" src="https://img.shields.io/badge/licence-MIT Licence-blue"></a>
+    <a href="https://raw.githubusercontent.com/GnosisFoundation/bintensors/refs/heads/master/LICENCE.md?"><img alt="GitHub" src="https://img.shields.io/badge/licence-MIT Licence-blue"></a>
     <a href="https://github.com/GnosisFoundation/bintensors/actions/workflows/rust.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/GnosisFoundation/bintensors/actions/workflows/rust.yml?branch=main&logo=rust"></a>
     <a href="https://github.com/GnosisFoundation/bintensors/actions/workflows/python.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/GnosisFoundation/bintensors/actions/workflows/python.yml?branch=main&logo=python"></a>
     <a href="https://crates.io/crates/bintensors"><img alt="Crates.io Version" src="https://img.shields.io/crates/v/bintensors"></a>
@@ -17,19 +16,22 @@
     <a href="https://pypi.org/project/bintensors/"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/bintensors?logo=python"></a>
 </p>
 
-Another file format, to store your models, and tensors.
-
+Another file format, to store your models, and "**tensors**".
 
 ## Installation
 
 ### Cargo
-You can add bintensors to your cargo by using ``cargo add``:
+
+You can add bintensors to your cargo by using `cargo add`:
+
 ```bash
 cargo add bintensors
 ```
 
 ### Pip
+
 You can install bintensors via the pip manager:
+
 ```python
 pip install bintensors
 ```
@@ -37,6 +39,7 @@ pip install bintensors
 ### From source
 
 For the sources, you need Rust
+
 ```bash
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -46,13 +49,11 @@ git clone https://github.com/GnosisFoundation/bintensors
 cd bintensors/bindings/python
 # Install maturin
 pipx install maturin
-# install 
+# install
 maturin develop
 ```
 
-
-### Getting Started 
-
+### Getting Started
 
 ```python
 import torch
@@ -72,6 +73,7 @@ with safe_open("model.bt", framework="pt", device="cpu") as f:
 ```
 
 Lets assume we want to handle file in rust
+
 ```rust
 use std::fs::File;
 use memmap2::MmapOptions;
@@ -82,19 +84,19 @@ let file = File::open(filename).unwrap();
 
 // Creates a read-only memory map backed by a file.
 let buffer = unsafe { MmapOptions::new().map(&file).unwrap() };
-// deserialize bytes 
+// deserialize bytes
 let tensors = BinTensors::deserialize(&buffer).unwrap();
 let tensor = tensors
         .tensor("weight1");
 ```
 
 ### Overview
-This project initially started as an exploration of the ``safetensors`` file format, primarily to gain a deeper understanding of an ongoing parent project of distributing models over a subnet. While the format itself is relatively intuitive and well-implemented, it leads to some consideration regarding the use of ``serde_json`` for storing metadata.
 
-Although the decision by the Hugging Face ``safetensors`` development team to utilize ``serde_json`` is understandable, such as readability of file, I questioned the necessity of this approach. Given the complexity of modern models, which can contain thousands of layers, it seems inefficient to store metadata in a human-readable format that is unlikely to be frequently accessed or useful. In many instances, such metadata might be more appropriately stored in a more compact, optimized format.
- 
-**TDLR** why not just use a more otimized serde such as ``bincode``.
+This project initially started as an exploration of the `safetensors` file format, primarily to gain a deeper understanding of an ongoing parent project of distributing models over a subnet. While the format itself is relatively intuitive and well-implemented, it leads to some consideration regarding the use of `serde_json` for storing metadata.
 
+Although the decision by the Hugging Face `safetensors` development team to utilize `serde_json` is understandable, such as readability of file, I questioned the necessity of this approach. Given the complexity of modern models, which can contain thousands of layers, it seems inefficient to store metadata in a human-readable format that is unlikely to be frequently accessed or useful. In many instances, such metadata might be more appropriately stored in a more compact, optimized format.
+
+**TDLR** why not just use a more otimized serde such as `bincode`.
 
 ### Observable Changes
 
@@ -110,9 +112,9 @@ Although the decision by the Hugging Face ``safetensors`` development team to ut
   </picture>
 </p>
 
-The incorporation of the ``bincode`` library resulted in a substantial performance improvement in deserialization, which was as expected, code can be found in ``bincode/bench/benchmark.rs``, to which we ran a running a simple benchmark on comparing both serializations of model tests conducted on both ``safesensors`` and ``bintensors`` within the Rust only the implementation. Specifically, deserialization performance nearly tripled, as shown in the figure below—this is a remarkable enhancement, though it begs the question why?
+The incorporation of the `bincode` library resulted in a substantial performance improvement in deserialization, which was as expected, code can be found in `bincode/bench/benchmark.rs`, to which we ran a running a simple benchmark on comparing both serializations of model tests conducted on both `safesensors` and `bintensors` within the Rust only the implementation. Specifically, deserialization performance nearly tripled, as shown in the figure below—this is a remarkable enhancement, though it begs the question why?
 
-To better understand the underlying reasons for such a significant improvement, a further investigation was carried out by analyzing the call stack. The goal was to compare the performance characteristics of ``serde_json`` and ``bincode``. In order to facilitate this comparison, we decided to generate a flame graph, to trace the function calls, providing a detailed visualization of the execution paths, to better understand if there could be some hold-up within the serde_json deserializer. The results of this experiment are illustrated in the figures below.
+To better understand the underlying reasons for such a significant improvement, a further investigation was carried out by analyzing the call stack. The goal was to compare the performance characteristics of `serde_json` and `bincode`. In order to facilitate this comparison, we decided to generate a flame graph, to trace the function calls, providing a detailed visualization of the execution paths, to better understand if there could be some hold-up within the serde_json deserializer. The results of this experiment are illustrated in the figures below.
 
 <p align="center">
   <picture>
@@ -133,10 +135,7 @@ To better understand the underlying reasons for such a significant improvement, 
   <br/>
 </p>
 
-
-
 ## Format
-
 
 <p align="center">
   <picture>
@@ -150,24 +149,33 @@ To better understand the underlying reasons for such a significant improvement, 
   <br/>
 </p>
 
- 
-In this section I suggest creating a small model and opening up your hex dump.
+In this section I suggest creating a small model and opening a hex dump to better visually decouple it.
 
 The file format is divided into three sections:
 
 Header Size:
 
-- 8 bytes: A little-endian, unsigned 64-bit integer (N) representing the size of the header.
+- 8 bytes: A little-endian, unsigned 64-bit integer that is $2^{63 - 1}$ representing the size of the header, though there is a cap on of 100Mb similar to `safetensors` but that may be changed later in the future.
 
- Header Data
+Header Data
 
 - N bytes: A dynamically serialized table, encoded in a condensed binary format for efficient tensor lookups.
 
-- The special key __metadata__ may contain a map of string-to-string pairs. Note that arbitrary JSON structures are not permitted; all values must be strings.
+- The special key `__metadata__` may contain a map of string-to-string pairs. Note that arbitrary JSON structures are not permitted; all values must be strings.
+- Capacity of 100Mb
 
 Tensor Data
 
-- A sequence of bytes representing the layered tensor data.
+- A sequence of bytes representing the layered tensor data. You can preform the calculate this buffer manually with the calculation bellow.
+
+  $$
+  B_M = \sum_{t_i \in T} \left[ \prod_{j=1}^n d_j \right] \cdot D{\left(t_i\right)}
+  $$
+
+Let $ B_M $ be the total buffer size for a model $ M $. Let $ T $ be the set of tensors in the model, where each tensor $ t_i $ is an element in this set. Each tensor $ t_i $ is characterized by a tuple of 64-bit integers $ d = (d_1, d_2, \dots, d_n) $, which represent its shape dimensions. The function $D$ is a surjection function returning the size of the data type of the tensor $ t_i $ within the buffer.
+
+
+- It may be interesting to preform a reduction tricks on such sparse tensors, allowing for possibly smaller storage space tradeoff over speed of serialization.
 
 ### Notes
 
@@ -187,6 +195,5 @@ Since this is a simple fork of safetensors it holds similar propeties that safet
 - Prevent DOS attacks: To ensure robust security in our file format, we've implemented anti-DOS protections while maintaining compatibility with the original format's approach. The header buffer is strictly limited to 100MB, preventing resource exhaustion attacks via oversized metadata. Additionally, we enforce strict address boundary validation to guarantee non-overlapping tensor allocations, ensuring memory consumption never exceeds the file's actual size during loading operations. This two-pronged approach effectively mitigates both memory exhaustion vectors and buffer overflow opportunities.
 - Faster load: PyTorch seems to be the fastest file to load out in the major ML formats. However, it does seem to have an extra copy on CPU, which we can bypass in this lib by using torch.UntypedStorage.from_file. Currently, CPU loading times are extremely fast with this lib compared to pickle. GPU loading times are as fast or faster than PyTorch equivalent. Loading first on CPU with memmapping with torch, and then moving all tensors to GPU seems to be faster too somehow (similar behavior in torch pickle)
 - Lazy loading: in distributed (multi-node or multi-gpu) settings, it’s nice to be able to load only part of the tensors on the various models. For BLOOM using this format enabled to load the model on 8 GPUs from 10mn with regular PyTorch weights down to 45s. This really speeds up feedbacks loops when developing on the model. For instance you don’t have to have separate copies of the weights when changing the distribution strategy (for instance Pipeline Parallelism vs Tensor Parallelism).
-
 
 Licence: [MIT](https://github.com/GnosisFoundation/bintensors/blob/master/LICENCE.md)
