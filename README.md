@@ -7,7 +7,7 @@
 ---
 
 <p align="center">
-    <a href="https://raw.githubusercontent.com/GnosisFoundation/bintensors/refs/heads/master/LICENCE.md?"><img alt="GitHub" src="https://img.shields.io/badge/licence-MIT Licence-blue"></a>
+    <a href="https://github.com/GnosisFoundation/bintensors/blob/master/LICENCE.md"><img alt="GitHub" src="https://img.shields.io/badge/licence-MIT Licence-blue"></a>
     <a href="https://github.com/GnosisFoundation/bintensors/actions/workflows/rust.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/GnosisFoundation/bintensors/actions/workflows/rust.yml?branch=main&logo=rust"></a>
     <a href="https://github.com/GnosisFoundation/bintensors/actions/workflows/python.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/GnosisFoundation/bintensors/actions/workflows/python.yml?branch=main&logo=python"></a>
     <a href="https://crates.io/crates/bintensors"><img alt="Crates.io Version" src="https://img.shields.io/crates/v/bintensors"></a>
