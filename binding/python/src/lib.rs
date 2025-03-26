@@ -8,7 +8,7 @@ use pyo3::Bound as PyBound;
 use pyo3::{intern, PyErr};
 
 use bintensors::slice::TensorIndexer;
-use bintensors::tensor::{Dtype, Metadata, BinTensors, TensorInfo, TensorView};
+use bintensors::tensor::{BinTensors, Dtype, Metadata, TensorInfo, TensorView};
 use bintensors::View;
 
 use std::borrow::Cow;
@@ -25,7 +25,6 @@ static NUMPY_MODULE: OnceLock<Py<PyModule>> = OnceLock::new();
 static TENSORFLOW_MODULE: OnceLock<Py<PyModule>> = OnceLock::new();
 static FLAX_MODULE: OnceLock<Py<PyModule>> = OnceLock::new();
 static MLX_MODULE: OnceLock<Py<PyModule>> = OnceLock::new();
-
 
 struct PyView<'a> {
     shape: Vec<usize>,
@@ -49,7 +48,6 @@ impl View for &PyView<'_> {
     }
 }
 
-
 fn prepare(tensor_dict: HashMap<String, PyBound<PyDict>>) -> PyResult<HashMap<String, PyView>> {
     let mut tensors = HashMap::with_capacity(tensor_dict.len());
     for (tensor_name, tensor_desc) in &tensor_dict {
@@ -57,9 +55,9 @@ fn prepare(tensor_dict: HashMap<String, PyBound<PyDict>>) -> PyResult<HashMap<St
             .get_item("shape")?
             .ok_or_else(|| BinTensorError::new_err(format!("Missing `shape` in {tensor_desc:?}")))?
             .extract()?;
-        let pydata: PyBound<PyAny> = tensor_desc.get_item("data")?.ok_or_else(|| {
-            BinTensorError::new_err(format!("Missing `data` in {tensor_desc:?}"))
-        })?;
+        let pydata: PyBound<PyAny> = tensor_desc
+            .get_item("data")?
+            .ok_or_else(|| BinTensorError::new_err(format!("Missing `data` in {tensor_desc:?}")))?;
         // Make sure it's extractable first.
         let data: &[u8] = pydata.extract()?;
         let data_len = data.len();
@@ -152,7 +150,7 @@ fn serialize<'py>(
 //     let metadata_map = metadata.map(HashMap::from_iter);
 //     let (checksum, out) = bintensors::tensor::serialize_with_checksum(&tensors, &metadata_map)
 //         .map_err(|e| BinTensorError::new_err(format!("Error while serializing: {e:?}")))?;
-    
+
 //     Ok(PyTuple::new(py, &[
 //         PyBytes::new(py, &Vec::from(checksum)),
 //         PyBytes::new(py, &out)
@@ -176,16 +174,15 @@ fn serialize<'py>(
 #[pyfunction]
 #[pyo3(signature = (filename, tensor_dict, metadata=None))]
 fn serialize_file(
-    filename   : PathBuf, 
+    filename: PathBuf,
     tensor_dict: HashMap<String, PyBound<PyDict>>,
-    metadata   : Option<HashMap<String, String>>,
+    metadata: Option<HashMap<String, String>>,
 ) -> PyResult<()> {
     let tensors = prepare(tensor_dict)?;
     bintensors::tensor::serialize_to_file(&tensors, &metadata, &filename)
         .map_err(|e| BinTensorError::new_err(format!("Error while seralizing {e:?}")))?;
     Ok(())
 }
-
 
 /// Opens a bintensors lazily and returns tensors as asked
 ///
@@ -199,7 +196,7 @@ fn serialize_file(
 ///             [("tensor_name", {"shape": [2, 3], "dtype": "F32", "data": b"\0\0.." }), (...)]
 #[pyfunction]
 #[pyo3(signature = (bytes))]
-fn deserialize(py : Python, bytes : &[u8]) -> PyResult<Vec<(String, HashMap<String, PyObject>)>> {
+fn deserialize(py: Python, bytes: &[u8]) -> PyResult<Vec<(String, HashMap<String, PyObject>)>> {
     let bin = BinTensors::deserialize(bytes)
         .map_err(|e| BinTensorError::new_err(format!("Error while deserializing: {e:?}")))?;
 
@@ -220,7 +217,6 @@ fn deserialize(py : Python, bytes : &[u8]) -> PyResult<Vec<(String, HashMap<Stri
         items.push((tensor_name, map));
     }
     Ok(items)
-
 }
 fn slice_to_indexer(
     (dim_idx, (slice_index, dim)): (usize, (SliceIndex, usize)),
@@ -314,9 +310,7 @@ fn parse_device(name: &str) -> PyResult<usize> {
         let device: usize = tokens[1].parse()?;
         Ok(device)
     } else {
-        Err(BinTensorError::new_err(format!(
-            "device {name} is invalid"
-        )))
+        Err(BinTensorError::new_err(format!("device {name} is invalid")))
     }
 }
 
@@ -338,9 +332,7 @@ impl<'source> FromPyObject<'source> for Device {
                 name if name.starts_with("xla:") => parse_device(name).map(Device::Xla),
                 name if name.starts_with("mlu:") => parse_device(name).map(Device::Mlu),
                 name if name.starts_with("hpu:") => parse_device(name).map(Device::Hpu),
-                name => Err(BinTensorError::new_err(format!(
-                    "device {name} is invalid"
-                ))),
+                name => Err(BinTensorError::new_err(format!("device {name} is invalid"))),
             }
         } else if let Ok(number) = ob.extract::<usize>() {
             Ok(Device::Anonymous(number))
@@ -1228,9 +1220,8 @@ pyo3::create_exception!(
     bintensor_rs,
     BinTensorError,
     PyException,
-        "Custom Python Exception for Bintesnor errors."
+    "Custom Python Exception for Bintesnor errors."
 );
-
 
 /// A Python module implemented in Rust.
 #[pymodule]
