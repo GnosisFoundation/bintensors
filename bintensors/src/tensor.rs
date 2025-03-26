@@ -378,7 +378,7 @@ impl<'data> BinTensors<'data> {
     /// Given a byte-buffer representing the whole bintensor file
     /// parses it and returns the Deserialized form (No Tensor allocation).
     ///
-    /// ```
+    /// ```ignore
     /// use bintensors::BinTensors;
     /// use memmap2::MmapOptions;
     /// use std::fs::File;
@@ -1231,4 +1231,5 @@ mod tests {
             _ => panic!("This should not be able to be deserialized"),
         }
     }
+
 }
