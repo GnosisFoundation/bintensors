@@ -262,6 +262,7 @@ def save(tensors: Dict[str, torch.Tensor], metadata: Optional[Dict[str, str]] = 
     result = bytes(serialized)
     return result
 
+
 def save_iter(tensors: Dict[str, torch.Tensor], metadata: Optional[Dict[str, str]] = None):
     """
     Saves a dictionary of tensors into raw bytes in bintensors format.
@@ -287,7 +288,7 @@ def save_iter(tensors: Dict[str, torch.Tensor], metadata: Optional[Dict[str, str
     buffer = save_iter(tensors)
     ```
     """
-    
+
 
 # TODO: since this is io bound we want to utilize threading, either
 # within here or within the binding of rust.
