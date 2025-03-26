@@ -168,11 +168,15 @@ Tensor Data
 
 - A sequence of bytes representing the layered tensor data. You can preform the calculate this buffer manually with the calculation bellow.
 
+ <div style="padding: 0.75em">
+
   $$
   B_M = \sum_{t_i \in T} \left[ \prod_{j=1}^n d_j \right] \cdot D{\left(t_i\right)}
   $$
 
-Let $ B_M $ be the total buffer size for a model $ M $. Let $ T $ be the set of tensors in the model, where each tensor $ t_i $ is an element in this set. Each tensor $ t_i $ is characterized by a tuple of 64-bit integers $ d = (d_1, d_2, \dots, d_n) $, which represent its shape dimensions. The function $D$ is a surjection function returning the size of the data type of the tensor $ t_i $ within the buffer.
+</div>
+
+Let $B_M$ be the total buffer size for a model $M$. Let $T$ be the set of tensors in the model, where each tensor $t_i$ is an element in this set. Each tensor $t_i$ is characterized by a tuple of 64-bit integers $d = (d_1, d_2, \dots, d_n)$, which represent its shape dimensions. The function $D$ is a surjection function returning the size of the data type of the tensor $t_i$ within the buffer.
 
 
 - It may be interesting to preform a reduction tricks on such sparse tensors, allowing for possibly smaller storage space tradeoff over speed of serialization.
