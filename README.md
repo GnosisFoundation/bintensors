@@ -74,7 +74,7 @@ with safe_open("model.bt", framework="pt", device="cpu") as f:
 
 Lets assume we want to handle file in rust
 
-```c
+```ignore
 use std::fs::File;
 use memmap2::MmapOptions;
 use bintensors::BinTensors;
