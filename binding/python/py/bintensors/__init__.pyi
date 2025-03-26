@@ -69,19 +69,16 @@ class safe_open:
 
     def __init__(self, filename, framework, device=...):
         pass
-
     def __enter__(self):
         """
         Start the context manager
         """
         pass
-
     def __exit__(self, _exc_type, _exc_value, _traceback):
         """
         Exits the context manager
         """
         pass
-
     def get_slice(self, name):
         """
         Returns a full slice view object
@@ -103,7 +100,6 @@ class safe_open:
         ```
         """
         pass
-
     def get_tensor(self, name):
         """
         Returns a full tensor
@@ -126,7 +122,6 @@ class safe_open:
         ```
         """
         pass
-
     def keys(self):
         """
         Returns the names of the tensors in the file.
@@ -136,7 +131,6 @@ class safe_open:
                 The name of the tensors contained in that file
         """
         pass
-
     def metadata(self):
         """
         Return the special non tensor information in the header
