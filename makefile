@@ -1,6 +1,6 @@
 # Define variables
 TARGET_DIR=docs
-KATEX_HEADER=katex.html
+KATEX_HEADER=../docs/katex.html
 DOCS_DIR=bintensors
 
 # Ensure the target directory exists
