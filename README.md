@@ -74,7 +74,7 @@ with safe_open("model.bt", framework="pt", device="cpu") as f:
 
 Lets assume we want to handle file in rust
 
-```ignore
+```rust ignore
 use std::fs::File;
 use memmap2::MmapOptions;
 use bintensors::BinTensors;
@@ -112,9 +112,9 @@ Although the decision by the Hugging Face `safetensors` development team to util
   </picture>
 </p>
 
-The incorporation of the `bincode` library resulted in a substantial performance improvement in deserialization, which was as expected, code can be found in `bincode/bench/benchmark.rs`, to which we ran a running a simple benchmark on comparing both serializations of model tests conducted on both `safesensors` and `bintensors` within the Rust only the implementation. Specifically, deserialization performance nearly tripled, as shown in the figure below—this is a remarkable enhancement, though it begs the question why?
+The incorporation of the `bincode` library resulted in a substantial performance improvement in deserialization, which was somewhat expected, bench code can be found in `bincode/bench/benchmark.rs`, to which we ran two separate tests on each repo running a simple benchmark on comparing both serializations of model tests conducted on both `safesensors` and `bintensors` within the Rust only the implementation. Specifically, deserialization performance nearly tripled, as shown in the figure above. This is a remarkable enhancement, though it begs the question of why.
 
-To better understand the underlying reasons for such a significant improvement, a further investigation was carried out by analyzing the call stack. The goal was to compare the performance characteristics of `serde_json` and `bincode`. In order to facilitate this comparison, we decided to generate a flame graph, to trace the function calls, providing a detailed visualization of the execution paths, to better understand if there could be some hold-up within the serde_json deserializer. The results of this experiment are illustrated in the figures below.
+To better understand the underlying reasons for such a significant improvement, a further investigation was carried out by analyzing the call stack. The goal was to compare the performance characteristics of `serde_json` and `bincode`. In order to facilitate this comparison, we decided to generate a flame graph, to trace the function calls, providing a detailed visualization of the execution paths, to understand better if there could be some hold-up within the serde_json deserializer. The results of this experiment are illustrated in the figures below. Note this was only run on a MacOS, hopefully at a later date I would like to perform this same experiment on other operating systems to compare, though it will likely hold similar results.
 
 <p align="center">
   <picture>
@@ -149,7 +149,9 @@ To better understand the underlying reasons for such a significant improvement, 
   <br/>
 </p>
 
-In this section I suggest creating a small model and opening a hex dump to better visually decouple it.
+In this section, I suggest creating a small model and opening a hex dump to better visually decouple it, while we go over the high level of bintensors file format.
+
+For a more in-depth understanding of the encoding; I would glance at [specs](https://github.com/GnosisFoundation/bintensors/blob/master/specs/encoding.md).
 
 The file format is divided into three sections:
 
@@ -160,26 +162,23 @@ Header Size:
 Header Data
 
 - N bytes: A dynamically serialized table, encoded in a condensed binary format for efficient tensor lookups.
-
-- The special key `__metadata__` may contain a map of string-to-string pairs. Note that arbitrary JSON structures are not permitted; all values must be strings.
-- Capacity of 100Mb
+- Contains a map of string-to-string pairs. Note that arbitrary JSON structures are not permitted; all values must be strings.
+- The header data deserialization decoding capacity is 100Mb.
 
 Tensor Data
 
-- A sequence of bytes representing the layered tensor data. You can preform the calculate this buffer manually with the calculation bellow.
+- A sequence of bytes representing the layered tensor data. You can calculate this buffer manually with the formulated equation bellow.
 
  <div style="padding: 0.75em">
 
   $$
-  B_M = \sum_{t_i \in T} \left[ \prod_{j=1}^n d_j \right] \cdot D{\left(t_i\right)}
+  B_M = \sum_{t_i \in T}\left( \left[ \prod_{j=1}^{n_i} d_{i,j} \right] \cdot D{\left(x_{i}\right)}\right)
   $$
 
 </div>
 
-Let $B_M$ be the total buffer size for a model $M$. Let $T$ be the set of tensors in the model, where each tensor $t_i$ is an element in this set. Each tensor $t_i$ is characterized by a tuple of 64-bit integers $d = (d_1, d_2, \dots, d_n)$, which represent its shape dimensions. The function $D$ is a surjection function returning the size of the data type of the tensor $t_i$ within the buffer.
+Let $B_M$ be the total buffer size for a model or model subset $M$. Let $T$ be the set of tensors in the model, where each tensor $t_i$ is an element in this set. Each tensor $t_i$ is characterized by a tuple of 64-bit unsigned integers $(d_{i,1}, d_{i,2}, \dots, d_{i,n_i})$, which represent its shape dimensions The function $D$ is a surjective function, mapping domain of tensor type $x_i$ to the codomain of bytes of tensor dtypes sizes which can be repersented as $\lbrace1, 2, 4, 8\rbrace$.
 
-
-- It may be interesting to preform a reduction tricks on such sparse tensors, allowing for possibly smaller storage space tradeoff over speed of serialization.
 
 ### Notes
 
