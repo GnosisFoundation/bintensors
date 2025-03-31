@@ -1,9 +1,8 @@
 //! Module Containing the most important structures
 use crate::lib::{Cow, HashMap, String, ToString, Vec};
-use crate::oid::ObjectId;
 use crate::slice::{InvalidSlice, SliceIterator, TensorIndexer};
 use bincode::{Decode, Encode};
-use serde::{Deserialize, Deserializer, Serialize, Serializer, ser::SerializeMap};
+use digest::Digest;
 #[cfg(feature = "std")]
 use std::io::Write;
 
@@ -15,7 +14,7 @@ const OFFSET: usize = 8;
 /// A Bintensor file.
 #[derive(Debug)]
 pub enum BinTensorError {
-    // TODO: possible uncomment when adding a magic number
+    // TODO: possible uncomment when adding a magic number or version
     // /// The magic nubmer of the file
     // InvalidMagicNumber,
     /// The header is an invalid UTF-8 string and cannot be read.
@@ -87,17 +86,6 @@ struct PreparedData {
     n: u64,
     header_bytes: Vec<u8>,
     offset: usize,
-}
-
-impl Encode for PreparedData {
-    fn encode<E: bincode::enc::Encoder>(
-        &self,
-        encoder: &mut E,
-    ) -> Result<(), bincode::error::EncodeError> {
-        bincode::Encode::encode(self.n.to_le_bytes().as_ref(), encoder)?;
-        bincode::Encode::encode(self.header_bytes.as_slice(), encoder)?;
-        Ok(())
-    }
 }
 
 /// The trait necessary to enable bintensors to serialize a tensor
@@ -220,6 +208,7 @@ fn prepare<S: AsRef<str> + Ord + core::fmt::Display, V: View, I: IntoIterator<It
         tensors.push(tensor);
     }
 
+    // encode the metadata into byte buffer
     let metadata: Metadata = Metadata::new(data_info.clone(), hmetadata)?;
     let mut metadata_buf = bincode::encode_to_vec(metadata, bincode::config::standard())?;
     // Force alignment to 8 bytes with padding.
@@ -228,7 +217,6 @@ fn prepare<S: AsRef<str> + Ord + core::fmt::Display, V: View, I: IntoIterator<It
     metadata_buf.extend(padding);
 
     let n: u64 = metadata_buf.len() as u64;
-
     Ok((
         PreparedData {
             n,
@@ -301,10 +289,12 @@ pub fn serialize_with_checksum<
     S: AsRef<str> + Ord + core::fmt::Display,
     V: View,
     I: IntoIterator<Item = (S, V)>,
+    H: Digest,
 >(
     data: I,
     data_info: &Option<HashMap<String, String>>,
-) -> Result<(ObjectId, Vec<u8>), BinTensorError> {
+    mut hasher: H,
+) -> Result<(Vec<u8>, Vec<u8>), BinTensorError> {
     let (
         PreparedData {
             n,
@@ -313,16 +303,19 @@ pub fn serialize_with_checksum<
         },
         tensors,
     ) = prepare(data, data_info)?;
-
     let expected_size = OFFSET + header_bytes.len() + offset;
     let mut buffer: Vec<u8> = Vec::with_capacity(expected_size);
-    buffer.extend(&n.to_le_bytes().to_vec());
-    buffer.extend(&header_bytes);
+
+    buffer.extend_from_slice(&n.to_le_bytes().to_vec());
+    buffer.extend_from_slice(&header_bytes);
+
     for tensor in tensors {
-        buffer.extend(tensor.data().as_ref());
+        let data = tensor.data();
+        buffer.extend_from_slice(data.as_ref());
     }
-    let checksum = ObjectId::sha1(&buffer);
-    Ok((checksum, buffer))
+
+    hasher.update(&buffer);
+    Ok((hasher.finalize()[..].to_vec(), buffer))
 }
 
 /// A structure owning some metadata to lookup tensors on a shared `data`
@@ -488,57 +481,10 @@ pub struct Metadata {
 }
 
 /// Helper struct used only for serialization deserialization
-#[derive(Serialize, Deserialize, Encode, Decode)]
+#[derive(Encode, Decode)]
 struct HashMetadata {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "__metadata__")]
     metadata: Option<HashMap<String, String>>,
-    #[serde(flatten)]
     tensors: HashMap<String, TensorInfo>,
-}
-
-impl<'de> Deserialize<'de> for Metadata {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let hashdata: HashMetadata = HashMetadata::deserialize(deserializer)?;
-        let (metadata, tensors) = (hashdata.metadata, hashdata.tensors);
-        let mut tensors: Vec<_> = tensors.into_iter().collect();
-        // We need to sort by offsets
-        // Previous versions might have a different ordering
-        // Than we expect (Not aligned ordered, but purely name ordered,
-        // or actually any order).
-        tensors.sort_by(|(_, left), (_, right)| left.data_offsets.cmp(&right.data_offsets));
-        Metadata::new(metadata, tensors).map_err(serde::de::Error::custom)
-    }
-}
-
-impl Serialize for Metadata {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut names = vec![""; self.index_map.len()];
-        for (name, index) in &self.index_map {
-            names[*index] = name;
-        }
-
-        let tensors: Vec<_> = names.iter().zip(self.tensors.iter()).collect();
-        let length = if let Some(metadata) = &self.metadata {
-            metadata.len()
-        } else {
-            0
-        };
-        let mut map = serializer.serialize_map(Some(tensors.len() + length))?;
-        if let Some(metadata) = &self.metadata {
-            map.serialize_entry("__metadata__", metadata)?;
-        }
-        for (name, info) in tensors {
-            map.serialize_entry(&name, &info)?;
-        }
-        map.end()
-    }
 }
 
 impl Metadata {
@@ -706,7 +652,7 @@ impl<'data> TensorView<'data> {
 /// A single tensor information.
 /// Endianness is assumed to be little endian
 /// Ordering is assumed to be 'C'.
-#[derive(Debug, Serialize, Deserialize, Clone, Encode, Decode)]
+#[derive(Debug, Clone, Encode, Decode)]
 pub struct TensorInfo {
     /// The type of each element of the tensor
     pub dtype: Dtype,
@@ -717,9 +663,7 @@ pub struct TensorInfo {
 }
 
 /// The various available dtypes. They MUST be in increasing alignment order
-#[derive(
-    Debug, Serialize, Deserialize, Encode, Decode, Clone, Copy, PartialEq, Eq, Ord, PartialOrd,
-)]
+#[derive(Debug, Encode, Decode, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
 #[non_exhaustive]
 pub enum Dtype {
     /// Boolan type
@@ -781,9 +725,15 @@ impl Dtype {
 
 #[cfg(test)]
 mod tests {
+    use core::usize;
+    use std::fs::File;
+
     use super::*;
     use crate::slice::IndexOp;
     use proptest::prelude::*;
+    use sha1::Sha1;
+    use sha2::Sha256;
+    use sha3::Sha3_256;
     #[cfg(not(feature = "std"))]
     extern crate std;
 
@@ -1232,4 +1182,203 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_metadata_buffer() {
+        let mut tensors_desc: Vec<(String, Vec<usize>)> = Vec::new();
+
+        tensors_desc.push(("ln_f.weight".to_string(), vec![768, 768]));
+        tensors_desc.push(("ln_f.bias".to_string(), vec![768]));
+
+        let dtype = Dtype::F32;
+        let n: usize = tensors_desc
+            .iter()
+            .map(|(_, shape)| shape.iter().product::<usize>())
+            .sum::<usize>()
+            * dtype.size(); // 4
+        let all_data = vec![0; n];
+        let mut metadata = HashMap::with_capacity(tensors_desc.len());
+        let mut offset = 0;
+        for (name, shape) in tensors_desc {
+            let n: usize = shape.iter().product();
+            let buffer = &all_data[offset..offset + n * dtype.size()];
+            let tensor = TensorView::new(dtype, shape, buffer).unwrap();
+            metadata.insert(name, tensor);
+            offset += n;
+        }
+        let (PreparedData { header_bytes, .. }, ..) = prepare(metadata, &None).unwrap();
+
+        let mut file = File::create("model.bin").unwrap();
+        file.write(&header_bytes).unwrap();
+    }
+
+    /// Only run these on release because they are really slow
+    #[cfg(not(debug_assertions))]
+    #[test]
+    fn test_checksum_sha1() {
+        let n_heads = 5;
+        let mut tensors_desc = vec![];
+        tensors_desc.push(("wte".to_string(), vec![50257, 768]));
+        tensors_desc.push(("wpe".to_string(), vec![1024, 768]));
+        for i in 0..n_heads {
+            tensors_desc.push((format!("h.{i}.ln_1.weight"), vec![768]));
+            tensors_desc.push((format!("h.{i}.ln_1.bias"), vec![768]));
+            tensors_desc.push((format!("h.{i}.attn.bias"), vec![1, 1, 1024, 1024]));
+            tensors_desc.push((format!("h.{i}.attn.c_attn.weight"), vec![768, 2304]));
+            tensors_desc.push((format!("h.{i}.attn.c_attn.bias"), vec![2304]));
+            tensors_desc.push((format!("h.{i}.attn.c_proj.weight"), vec![768, 768]));
+            tensors_desc.push((format!("h.{i}.attn.c_proj.bias"), vec![768]));
+            tensors_desc.push((format!("h.{i}.ln_2.weight"), vec![768]));
+            tensors_desc.push((format!("h.{i}.ln_2.bias"), vec![768]));
+            tensors_desc.push((format!("h.{i}.mlp.c_fc.weight"), vec![768, 3072]));
+            tensors_desc.push((format!("h.{i}.mlp.c_fc.bias"), vec![3072]));
+            tensors_desc.push((format!("h.{i}.mlp.c_proj.weight"), vec![3072, 768]));
+            tensors_desc.push((format!("h.{i}.mlp.c_proj.bias"), vec![768]));
+        }
+        tensors_desc.push(("ln_f.weight".to_string(), vec![768]));
+        tensors_desc.push(("ln_f.bias".to_string(), vec![768]));
+
+        let dtype = Dtype::F32;
+        let n: usize = tensors_desc
+            .iter()
+            .map(|(_, shape)| shape.iter().product::<usize>())
+            .sum::<usize>()
+            * dtype.size(); // 4
+        let all_data = vec![0; n]; // Make `all_data` a `Vec<u8>`
+        let mut metadata: HashMap<String, TensorView<'_>> =
+            HashMap::with_capacity(tensors_desc.len());
+        let mut offset = 0;
+
+        // Adjust this loop to use owned data properly
+        for (name, shape) in tensors_desc {
+            let n: usize = shape.iter().product();
+            let buffer = &all_data[offset..offset + n * dtype.size()];
+            let tensor = TensorView::new(dtype, shape, buffer).unwrap();
+            metadata.insert(name, tensor);
+            offset += n;
+        }
+
+        let mut hasher = Sha1::new();
+        let (checksum, _) = serialize_with_checksum(metadata, &None, hasher).unwrap();
+        assert_eq!(
+            checksum,
+            &[
+                64, 128, 91, 191, 53, 18, 37, 145, 33, 154, 255, 163, 3, 8, 166, 199, 81, 240, 94,
+                49
+            ]
+        )
+    }
+
+    /// Only run these on release because they are really slow
+    #[cfg(not(debug_assertions))]
+    #[test]
+    fn test_check_sha2() {
+        let n_heads = 5;
+        let mut tensors_desc = vec![];
+        tensors_desc.push(("wte".to_string(), vec![50257, 768]));
+        tensors_desc.push(("wpe".to_string(), vec![1024, 768]));
+        for i in 0..n_heads {
+            tensors_desc.push((format!("h.{i}.ln_1.weight"), vec![768]));
+            tensors_desc.push((format!("h.{i}.ln_1.bias"), vec![768]));
+            tensors_desc.push((format!("h.{i}.attn.bias"), vec![1, 1, 1024, 1024]));
+            tensors_desc.push((format!("h.{i}.attn.c_attn.weight"), vec![768, 2304]));
+            tensors_desc.push((format!("h.{i}.attn.c_attn.bias"), vec![2304]));
+            tensors_desc.push((format!("h.{i}.attn.c_proj.weight"), vec![768, 768]));
+            tensors_desc.push((format!("h.{i}.attn.c_proj.bias"), vec![768]));
+            tensors_desc.push((format!("h.{i}.ln_2.weight"), vec![768]));
+            tensors_desc.push((format!("h.{i}.ln_2.bias"), vec![768]));
+            tensors_desc.push((format!("h.{i}.mlp.c_fc.weight"), vec![768, 3072]));
+            tensors_desc.push((format!("h.{i}.mlp.c_fc.bias"), vec![3072]));
+            tensors_desc.push((format!("h.{i}.mlp.c_proj.weight"), vec![3072, 768]));
+            tensors_desc.push((format!("h.{i}.mlp.c_proj.bias"), vec![768]));
+        }
+        tensors_desc.push(("ln_f.weight".to_string(), vec![768]));
+        tensors_desc.push(("ln_f.bias".to_string(), vec![768]));
+
+        let dtype = Dtype::F32;
+        let n: usize = tensors_desc
+            .iter()
+            .map(|(_, shape)| shape.iter().product::<usize>())
+            .sum::<usize>()
+            * dtype.size(); // 4
+        let all_data = vec![0; n]; // Make `all_data` a `Vec<u8>`
+        let mut metadata: HashMap<String, TensorView<'_>> =
+            HashMap::with_capacity(tensors_desc.len());
+        let mut offset = 0;
+
+        // Adjust this loop to use owned data properly
+        for (name, shape) in tensors_desc {
+            let n: usize = shape.iter().product();
+            let buffer = &all_data[offset..offset + n * dtype.size()];
+            let tensor = TensorView::new(dtype, shape, buffer).unwrap();
+            metadata.insert(name, tensor);
+            offset += n;
+        }
+
+        let hasher = Sha256::new();
+        let (checksum, _) = serialize_with_checksum(metadata, &None, hasher).unwrap();
+        assert_eq!(
+            checksum,
+            &[
+                78, 12, 80, 241, 204, 11, 0, 134, 204, 223, 108, 171, 105, 32, 171, 75, 157, 147,
+                42, 128, 116, 213, 185, 217, 53, 23, 116, 133, 247, 70, 126, 31
+            ]
+        )
+    }
+
+    /// Only run these on release because they are really slow
+    #[cfg(not(debug_assertions))]
+    #[test]
+    fn test_check_sha3() {
+        let n_heads = 5;
+        let mut tensors_desc = vec![];
+        tensors_desc.push(("wte".to_string(), vec![50257, 768]));
+        tensors_desc.push(("wpe".to_string(), vec![1024, 768]));
+        for i in 0..n_heads {
+            tensors_desc.push((format!("h.{i}.ln_1.weight"), vec![768]));
+            tensors_desc.push((format!("h.{i}.ln_1.bias"), vec![768]));
+            tensors_desc.push((format!("h.{i}.attn.bias"), vec![1, 1, 1024, 1024]));
+            tensors_desc.push((format!("h.{i}.attn.c_attn.weight"), vec![768, 2304]));
+            tensors_desc.push((format!("h.{i}.attn.c_attn.bias"), vec![2304]));
+            tensors_desc.push((format!("h.{i}.attn.c_proj.weight"), vec![768, 768]));
+            tensors_desc.push((format!("h.{i}.attn.c_proj.bias"), vec![768]));
+            tensors_desc.push((format!("h.{i}.ln_2.weight"), vec![768]));
+            tensors_desc.push((format!("h.{i}.ln_2.bias"), vec![768]));
+            tensors_desc.push((format!("h.{i}.mlp.c_fc.weight"), vec![768, 3072]));
+            tensors_desc.push((format!("h.{i}.mlp.c_fc.bias"), vec![3072]));
+            tensors_desc.push((format!("h.{i}.mlp.c_proj.weight"), vec![3072, 768]));
+            tensors_desc.push((format!("h.{i}.mlp.c_proj.bias"), vec![768]));
+        }
+        tensors_desc.push(("ln_f.weight".to_string(), vec![768]));
+        tensors_desc.push(("ln_f.bias".to_string(), vec![768]));
+
+        let dtype = Dtype::F32;
+        let n: usize = tensors_desc
+            .iter()
+            .map(|(_, shape)| shape.iter().product::<usize>())
+            .sum::<usize>()
+            * dtype.size(); // 4
+        let all_data = vec![0; n]; // Make `all_data` a `Vec<u8>`
+        let mut metadata: HashMap<String, TensorView<'_>> =
+            HashMap::with_capacity(tensors_desc.len());
+        let mut offset = 0;
+
+        // Adjust this loop to use owned data properly
+        for (name, shape) in tensors_desc {
+            let n: usize = shape.iter().product();
+            let buffer = &all_data[offset..offset + n * dtype.size()];
+            let tensor = TensorView::new(dtype, shape, buffer).unwrap();
+            metadata.insert(name, tensor);
+            offset += n;
+        }
+
+        let hasher = Sha3_256::new();
+        let (checksum, _) = serialize_with_checksum(metadata, &None, hasher).unwrap();
+        assert_eq!(
+            checksum,
+            &[
+                225, 226, 176, 72, 163, 20, 200, 214, 167, 115, 171, 54, 12, 136, 244, 19, 140, 39,
+                253, 142, 136, 21, 150, 31, 201, 17, 61, 210, 146, 110, 129, 10
+            ]
+        )
+    }
 }

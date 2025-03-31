@@ -447,16 +447,18 @@ mod tests {
         assert_eq!(iterator.next(), Some(&data[0..24]));
         assert_eq!(iterator.next(), None);
 
-        assert!(SliceIterator::new(
-            &attn_0,
-            &[
-                TensorIndexer::Narrow(Bound::Unbounded, Bound::Unbounded),
-                TensorIndexer::Narrow(Bound::Unbounded, Bound::Unbounded),
-                TensorIndexer::Narrow(Bound::Unbounded, Bound::Unbounded),
-                TensorIndexer::Narrow(Bound::Unbounded, Bound::Unbounded),
-            ],
-        )
-        .is_err(),);
+        assert!(
+            SliceIterator::new(
+                &attn_0,
+                &[
+                    TensorIndexer::Narrow(Bound::Unbounded, Bound::Unbounded),
+                    TensorIndexer::Narrow(Bound::Unbounded, Bound::Unbounded),
+                    TensorIndexer::Narrow(Bound::Unbounded, Bound::Unbounded),
+                    TensorIndexer::Narrow(Bound::Unbounded, Bound::Unbounded),
+                ],
+            )
+            .is_err(),
+        );
     }
 
     #[test]
