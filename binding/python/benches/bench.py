@@ -2,11 +2,9 @@
 import time
 import torch
 import pyperf
-import argparse
 import logging
 
 from typing import Dict, Tuple
-from contextlib import ContextDecorator
 
 from bintensors.torch import serialize, load, _flatten
 
@@ -17,7 +15,6 @@ py_runner = pyperf.Runner()
 
 
 def create_gpt2(n_layers: int = 20) -> Dict[str, torch.Tensor]:
-    """Create GPT-2 model architecture with specified number of layers."""
     tensors = {}
     tensors["wte"] = torch.zeros((50257, 768))
     tensors["wpe"] = torch.zeros((1024, 768))
@@ -75,8 +72,6 @@ def load_model_bench(buffer: bytes) -> float:
 
 
 def main():
-    # Run all benchmarks if '--all' flag is passed
-    py_runner.argparser.add_argument()
     # Run the "serialize_gpt2" benchmark
     py_runner.bench_func("serialize_gpt2_bench", serialize_gpt2)
 
