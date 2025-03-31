@@ -8,10 +8,10 @@
 
 <p align="center">
     <a href="https://github.com/GnosisFoundation/bintensors/blob/master/LICENCE.md"><img alt="GitHub" src="https://img.shields.io/badge/licence-MIT Licence-blue"></a>
-    <a href="https://github.com/GnosisFoundation/bintensors/actions/workflows/rust.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/GnosisFoundation/bintensors/actions/workflows/rust.yml?branch=master&logo=rust"></a>
+    <a href="https://github.com/GnosisFoundation/bintensors/actions/workflows/rust.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/GnosisFoundation/bintensors/actions/workflows/rust.yml?branch=master&logo=rust&logoColor=orange"></a>
     <a href="https://github.com/GnosisFoundation/bintensors/actions/workflows/python.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/GnosisFoundation/bintensors/actions/workflows/python.yml?branch=master&logo=python"></a>
     <a href="https://crates.io/crates/bintensors"><img alt="Crates.io Version" src="https://img.shields.io/crates/v/bintensors"></a>
-    <a href="https://docs.rs/bintensors"><img alt="docs.rs" src="https://img.shields.io/badge/rust-docs.rs-blue?logo=rust"></a>
+    <a href="https://docs.rs/bintensors"><img alt="docs.rs" src="https://img.shields.io/badge/rust-docs.rs-lightgray?logo=rust&logoColor=orange"></a>
     <a href="https://pypi.org/project/bintensors/"><img alt="PyPI" src="https://img.shields.io/pypi/v/bintensors"></a>
     <a href="https://pypi.org/project/bintensors/"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/bintensors?logo=python"></a>
 </p>
@@ -53,7 +53,7 @@ pipx install maturin
 maturin develop
 ```
 
-### Getting Started
+## Getting Started
 
 ```python
 import torch
@@ -90,11 +90,11 @@ let tensor = tensors
         .tensor("weight1");
 ```
 
-### Overview
+## Overview
 
 This project initially started as an exploration of the `safetensors` file format, primarily to gain a deeper understanding of an ongoing parent project of distributing models over a subnet. While the format itself is relatively intuitive and well-implemented, it leads to some consideration regarding the use of `serde_json` for storing metadata.
 
-Although the decision by the Hugging Face `safetensors` development team to utilize `serde_json` is understandable, such as readability of file, I questioned the necessity of this approach. Given the complexity of modern models, which can contain thousands of layers, it seems inefficient to store metadata in a human-readable format that is unlikely to be frequently accessed or useful. In many instances, such metadata might be more appropriately stored in a more compact, optimized format.
+Although the decision by the Hugging Face `safetensors` development team to utilize `serde_json` is understandable, such as readability of file, I questioned the necessity of this approach. Given the complexity of modern models, which can contain thousands of layers, it seems inefficient to store metadata in a human-readable format. In many instances, such metadata might be more appropriately stored in a more compact, optimized format.
 
 **TDLR** why not just use a more otimized serde such as `bincode`.
 
@@ -169,16 +169,34 @@ Tensor Data
 
 - A sequence of bytes representing the layered tensor data. You can calculate this buffer manually with the formulated equation bellow.
 
- <div style="padding: 0.75em">
+<div style="padding: 0.75em">
 
-  $$
-  B_M = \sum_{t_i \in T}\left( \left[ \prod_{j=1}^{n_i} d_{i,j} \right] \cdot D{\left(x_{i}\right)}\right)
-  $$
+$$
+B_M = \sum_{t_i \in T}\left( \left[ \prod_{j=1}^{n_i} d_{i,j} \right] \cdot D{\left(x_{i}\right)}\right)
+$$
 
 </div>
 
 Let $B_M$ be the total buffer size for a model or model subset $M$. Let $T$ be the set of tensors in the model, where each tensor $t_i$ is an element in this set. Each tensor $t_i$ is characterized by a tuple of 64-bit unsigned integers $(d_{i,1}, d_{i,2}, \dots, d_{i,n_i})$, which represent its shape dimensions The function $D$ is a surjective function, mapping domain of tensor type $x_i$ to the codomain of bytes of tensor dtypes sizes which can be repersented as $\lbrace1, 2, 4, 8\rbrace$.
 
+e.g: let's determine how many bytes are required to store the embedding layer of the GPT-2 model. The model has two large tensors: the **token embedder** (wte) with a shape of $\left(50,257,786\right)$ and the **position embedder** (wpe) with a shape of $\left(1,024,768\right)$. For simplicity, we assume that all weights are stored as ``float32``. This also applies to the ``safetensors`` format.
+
+
+<div style="padding: 0.75em">
+
+$$
+\begin{aligned}
+B_{embedding} &= \left(50,257 \times 786\right) \times 4 + \left(1,024 \times 768\right) \times 4 \\
+&= (50,257 \times 786) \times 4 + (1,024 \times 768) \times 4 \\
+&= 39,502,002 \times 4 + 786,432 \times 4 \\
+&= 158,008,008 + 3,145,728 \\
+&= 161,153,736 \\
+& \therefore{B_{encoder} \text{ totals } 161,153,736 \text{ bytes or } 161.15 \text{Mb}}
+\end{aligned}
+
+$$
+
+</div>
 
 ### Notes
 
@@ -189,6 +207,7 @@ Let $B_M$ be the total buffer size for a model or model subset $M$. Let $T$ be t
 - Endianness: Little-endian. moment.
 - Order: ‘C’ or row-major.
 - Checksum over the bytes, giving the file a unique identiy.
+  - Allows distrituive networks to break, and validate the contents prior to building
 
 ## Benefits
 
