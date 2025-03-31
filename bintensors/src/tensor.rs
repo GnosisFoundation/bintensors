@@ -325,7 +325,7 @@ pub struct BinTensors<'data> {
     data: &'data [u8],
 }
 
-impl<'data> core::fmt::Debug for BinTensors<'data>{
+impl<'data> core::fmt::Debug for BinTensors<'data> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "BinTensors {{ {:?} }}", self.metadata)
     }
@@ -513,7 +513,7 @@ impl Metadata {
             tensors,
             index_map,
         };
-        // metadata.validate()?;
+        metadata.validate()?;
         Ok(metadata)
     }
 
@@ -1196,8 +1196,14 @@ mod tests {
         }
         let (PreparedData { header_bytes, .. }, ..) = prepare(metadata, &None).unwrap();
 
-        let mut file = File::create("model.bin").unwrap();
-        file.write(&header_bytes).unwrap();
+        assert_eq!(
+            header_bytes,
+            &[
+                0, 2, 11, 1, 251, 0, 3, 0, 251, 0, 12, 11, 2, 251, 0, 3, 251, 0, 3, 251, 0, 12,
+                252, 0, 12, 36, 0, 2, 11, 108, 110, 95, 102, 46, 119, 101, 105, 103, 104, 116, 1,
+                9, 108, 110, 95, 102, 46, 98, 105, 97, 115, 0, 32, 32, 32, 32
+            ]
+        )
     }
 
     /// Only run these on release because they are really slow
