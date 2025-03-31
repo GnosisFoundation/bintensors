@@ -16,6 +16,9 @@
     <a href="https://pypi.org/project/bintensors/"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/bintensors?logo=python"></a>
 </p>
 
+> [!NOTE]
+>This is a pre-release package `BinTensors`. As we refine the format, changes may be introduced to improve performance and add new features. While we aim to ensure backward compatibility, adjustments to previous file versions may be necessary.
+
 Another file format, to store your models, and "**tensors**".
 
 ## Installation
