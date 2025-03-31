@@ -2,4 +2,9 @@ bintensors/target
 
 # <-- testing -->
 bintensors/proptest-regressions
-bintensors/out.bintensor
+
+# <-- lock -->
+**/Cargo.lock
+
+# <-- l -->
+**/.DS_Store
