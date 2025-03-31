@@ -1,8 +1,7 @@
 # Standard BinTensors Specification
 
-NOTE: This is a pre-release specification detailing the serialization format used within `BinTensors`, within that format we use default data types serialization methods, which you can find in `bincode` [specification](https://github.com/bincode-org/bincode/blob/trunk/docs/spec.md).
-
-As we refine the format, changes may be introduced to improve performance and add new features. While we aim to ensure backward compatibility, adjustments to previous file versions may be necessary.
+> [!NOTE]
+>This is a pre-release specification detailing the serialization format used within `BinTensors`, within that format we use default data types serialization methods, which you can find in `bincode` [specification](https://github.com/bincode-org/bincode/blob/trunk/docs/spec.md). As we refine the format, changes may be introduced to improve performance and add new features. While we aim to ensure backward compatibility, adjustments to previous file versions may be necessary.
 
 ## Preface
 
@@ -21,13 +20,17 @@ This document serves as an introduction to the serialization techniques used wit
 
 By default the seralization of the data types used are little-edian byte order. Meaning the multi bytes data structues and types are encoded with there least significant byte first.
 
+
 <p align="center">
-<div style="background-color:white; padding:8px">
+  <picture>
+    <img alt="bintensors" src="https://github.com/GnosisFoundation/bintensors/blob/master/.github/assets/endian.png" style="max-width: 100%;">
+  </picture>
+  <br/>
 
-![](https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/32bit-Endianess.svg/880px-32bit-Endianess.svg.png)
-
-</div>
-<span> <a src="https://en.wikipedia.org/wiki/Endianness">Wikipedia</a> diagram demonstrating big-endianness versus little-endianness</span>
+  <sub>
+     <a href="https://en.wikipedia.org/wiki/Endianness">Wikipedia</a> diagram demonstrating big-endianness versus little-endianness
+  </sub>
+  <br/>
 </p>
 
 ## IntEncoding
@@ -212,11 +215,17 @@ assert_eq!(
 
 ## Assembling the Format
 
-```
-┌────────────────┬────────────┬───────────────────────┬──────────────────────┐
-│ SofM (8 bytes) │  Metadata  |  padding : min(n, 8)  │ Tensor N Chunks...   │
-└────────────────────────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <picture>
+    <img alt="bintensors" src="https://github.com/GnosisFoundation/bintensors/blob/master/.github/assets/bt-format.png" style="max-width: 100%;">
+  </picture>
+  <br/>
+
+  <sub>
+    Visual representation of bintensors (bt) file format
+  </sub>
+  <br/>
+</p>
 
 Now that we've outlined the core serialization structures used in the `BinTensors` file format, let's examine how to properly interpret and reconstruct an actual binary buffer. The majority of serialization complexity is concentrated in the metadata portion.
 
