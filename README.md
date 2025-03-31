@@ -16,8 +16,6 @@
     <a href="https://pypi.org/project/bintensors/"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/bintensors?logo=python"></a>
 </p>
 
-> [!NOTE]
->This is a pre-release package `BinTensors`. As we refine the format, changes may be introduced to improve performance and add new features. While we aim to ensure backward compatibility, adjustments to previous file versions may be necessary.
 
 Another file format, to store your models, and "**tensors**".
 
@@ -187,16 +185,14 @@ e.g: let's determine how many bytes are required to store the embedding layer of
 
 <div style="padding: 0.75em">
 
-$$
-\begin{aligned}
-B_{embedding} &= \left(50,257 \times 786\right) \times 4 + \left(1,024 \times 768\right) \times 4 \\
-&= (50,257 \times 786) \times 4 + (1,024 \times 768) \times 4 \\
-&= 39,502,002 \times 4 + 786,432 \times 4 \\
-&= 158,008,008 + 3,145,728 \\
-&= 161,153,736 \\
-& \therefore{B_{encoder} \text{ totals } 161,153,736 \text{ bytes or } 161.15 \text{Mb}}
+$$ \begin{aligned}
+B_{embedding} &= \left(50,257 \times 768\right) \times 4 + \left(1,024 \times 768\right) \times 4 \\
+&= (50,257 \times 768) \times 4 + (1,024 \times 768) \times 4 \\
+&= 38,597,376 \times 4 + 786,432 \times 4 \\
+&= 154,389,504 + 3,145,728 \\
+&= 157,535,232 \\
+&\therefore B_{encoder} \text{ totals } 157,535,232 \text{ bytes or } 157.54 \text{ MB}
 \end{aligned}
-
 $$
 
 </div>

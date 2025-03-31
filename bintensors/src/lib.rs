@@ -2,7 +2,7 @@
 #![doc(
     html_logo_url = "https://github.com/GnosisFoundation/bintensors/blob/master/.github/assets/bintensors-logo.png"
 )]
-#![doc = include_str!("../README.md")]
+#![doc = include_str!("../../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 pub mod slice;
 pub mod tensor;
