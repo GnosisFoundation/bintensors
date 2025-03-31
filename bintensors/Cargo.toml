@@ -3,6 +3,16 @@ name = "bintensors"
 version = "0.0.1-alpha.1"
 edition = "2024"
 license = "MIT"
+authors = ["Luca Vivona"]
+readme = "README.md"
+repository = "https://github.com/GnosisFoundation/bintensors"
+description = """
+Provides functions to read and write bintensors which aim to be faster then
+safetensors by using binary serialization rather then a JSON serialization.
+The format is 8 bytes which is an unsized int, being the size of a Binary header,
+the binary encoder header refers to the `dtype` the `shape` and `data_offsets` which are the offsets
+for the values in the rest of the file.
+"""
 
 [dependencies]
 bincode = { version = "2.0.1", default-features = false, features = ["derive"] }
