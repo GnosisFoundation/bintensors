@@ -1125,10 +1125,10 @@ mod tests {
             index_map.insert(key, i);
         }
 
-        let metadata =  Metadata {
+        let metadata = Metadata {
             metadata: None,
             tensors,
-            index_map
+            index_map,
         };
 
         println!("{metadata:?}");
@@ -1141,7 +1141,7 @@ mod tests {
         f.write_all(&serialized).unwrap();
         f.write_all(b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0").unwrap();
         f.flush().unwrap();
-        
+
         let reloaded = std::fs::read(filename).unwrap();
         match BinTensors::deserialize(&reloaded) {
             Err(BinTensorError::InvalidOffset(_)) => {
@@ -1254,18 +1254,13 @@ mod tests {
         let hasher = Sha1::new();
         let (_, _, checksum) = prepare_with_checksum(metadata, &None, hasher).unwrap();
 
-
         checksum
     }
-    
+
     #[cfg(not(debug_assertions))]
     #[test]
     fn test_metadata_buffer() {
-
-        assert_eq!(
-            dummy_data_checksum(),
-            dummy_data_checksum()
-        )
+        assert_eq!(dummy_data_checksum(), dummy_data_checksum())
     }
 
     /// Only run these on release because they are really slow
