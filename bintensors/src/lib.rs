@@ -9,7 +9,7 @@ pub mod tensor;
 /// serialize_to_file only valid in std
 #[cfg(feature = "std")]
 pub use tensor::serialize_to_file;
-pub use tensor::{BinTensorError, BinTensors, Dtype, View, serialize};
+pub use tensor::{BinTensorError, BinTensors, Dtype, View, serialize, serialize_with_checksum};
 
 // TODO: uncomment when all of no_std is ready
 // #[cfg(feature = "alloc")]

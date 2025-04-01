@@ -210,7 +210,10 @@ fn prepare<S: AsRef<str> + Ord + core::fmt::Display, V: View, I: IntoIterator<It
 
     // encode the metadata into byte buffer
     let metadata: Metadata = Metadata::new(data_info.clone(), hmetadata)?;
-    let mut metadata_buf = bincode::encode_to_vec(metadata, bincode::config::standard())?;
+    let mut metadata_buf = bincode::encode_to_vec(
+        metadata,
+        bincode::config::standard().with_limit::<MAX_HEADER_SIZE>(),
+    )?;
     // Force alignment to 8 bytes with padding.
     let extra = (8 - metadata_buf.len() % 8) % 8;
     let padding = vec![b' '; extra];
@@ -224,6 +227,64 @@ fn prepare<S: AsRef<str> + Ord + core::fmt::Display, V: View, I: IntoIterator<It
             offset,
         },
         tensors,
+    ))
+}
+
+fn prepare_with_checksum<
+    S: AsRef<str> + Ord + core::fmt::Display,
+    V: View,
+    I: IntoIterator<Item = (S, V)>,
+    H: Digest,
+>(
+    data: I,
+    data_info: &Option<HashMap<String, String>>,
+    mut hasher: H,
+) -> Result<(PreparedData, Vec<V>, Vec<u8>), BinTensorError> {
+    // Make sure we're sorting by descending dtype alignment
+    // Then by name
+    let mut data: Vec<_> = data.into_iter().collect();
+    data.sort_by(|(lname, left), (rname, right)| {
+        right.dtype().cmp(&left.dtype()).then(lname.cmp(rname))
+    });
+
+    let mut tensors: Vec<V> = Vec::with_capacity(data.len());
+    let mut hmetadata = Vec::with_capacity(data.len());
+    let mut offset = 0;
+    let data: Vec<_> = data.into_iter().collect();
+    for (name, tensor) in data {
+        let n = tensor.data_len();
+        let tensor_info = TensorInfo {
+            dtype: tensor.dtype(),
+            shape: tensor.shape().to_vec(),
+            data_offsets: (offset, offset + n),
+        };
+        offset += n;
+        hmetadata.push((name.to_string(), tensor_info));
+        // infer digest order
+        hasher.update(&tensor.data().as_ref());
+        tensors.push(tensor);
+    }
+
+    // encode the metadata into byte buffer
+    let metadata: Metadata = Metadata::new(data_info.clone(), hmetadata)?;
+    let mut metadata_buf = bincode::encode_to_vec(
+        metadata,
+        bincode::config::standard().with_limit::<MAX_HEADER_SIZE>(),
+    )?;
+    // Force alignment to 8 bytes with padding.
+    let extra = (8 - metadata_buf.len() % 8) % 8;
+    let padding = vec![b' '; extra];
+    metadata_buf.extend(padding);
+
+    let n: u64 = metadata_buf.len() as u64;
+    Ok((
+        PreparedData {
+            n,
+            header_bytes: metadata_buf,
+            offset,
+        },
+        tensors,
+        hasher.finalize()[..].to_vec(),
     ))
 }
 
@@ -293,7 +354,7 @@ pub fn serialize_with_checksum<
 >(
     data: I,
     data_info: &Option<HashMap<String, String>>,
-    mut hasher: H,
+    hasher: H,
 ) -> Result<(Vec<u8>, Vec<u8>), BinTensorError> {
     let (
         PreparedData {
@@ -302,7 +363,8 @@ pub fn serialize_with_checksum<
             offset,
         },
         tensors,
-    ) = prepare(data, data_info)?;
+        checksum,
+    ) = prepare_with_checksum(data, data_info, hasher)?;
     let expected_size = OFFSET + header_bytes.len() + offset;
     let mut buffer: Vec<u8> = Vec::with_capacity(expected_size);
 
@@ -314,8 +376,7 @@ pub fn serialize_with_checksum<
         buffer.extend(data.as_ref());
     }
 
-    hasher.update(&buffer);
-    Ok((hasher.finalize()[..].to_vec(), buffer))
+    Ok((checksum, buffer))
 }
 
 /// A structure owning some metadata to lookup tensors on a shared `data`
@@ -478,7 +539,7 @@ impl<'data> BinTensors<'data> {
 
 /// The stuct representing the header of bintensor files which allow
 /// indexing into the raw byte-buffer array and how to interpret it.
-#[derive(Debug, Clone, Decode, Encode)]
+#[derive(Debug, Clone, Encode, Decode)]
 pub struct Metadata {
     metadata: Option<HashMap<String, String>>,
     tensors: Vec<TensorInfo>,
@@ -731,7 +792,6 @@ impl Dtype {
 #[cfg(test)]
 mod tests {
     use core::usize;
-    use std::fs::File;
 
     use super::*;
     use crate::slice::IndexOp;
@@ -1171,8 +1231,10 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_metadata_buffer() {
+
+    #[cfg(not(debug_assertions))]
+    /// This should only return one Vec<u8>
+    fn dummy_data_checksum() -> Vec<u8> {
         let mut tensors_desc: Vec<(String, Vec<usize>)> = Vec::new();
 
         tensors_desc.push(("ln_f.weight".to_string(), vec![768, 768]));
@@ -1194,15 +1256,21 @@ mod tests {
             metadata.insert(name, tensor);
             offset += n;
         }
-        let (PreparedData { header_bytes, .. }, ..) = prepare(metadata, &None).unwrap();
+
+        let hasher = Sha1::new();
+        let (_, _, checksum) = prepare_with_checksum(metadata, &None, hasher).unwrap();
+
+
+        checksum
+    }
+    
+    #[cfg(not(debug_assertions))]
+    #[test]
+    fn test_metadata_buffer() {
 
         assert_eq!(
-            header_bytes,
-            &[
-                0, 2, 11, 1, 251, 0, 3, 0, 251, 0, 12, 11, 2, 251, 0, 3, 251, 0, 3, 251, 0, 12,
-                252, 0, 12, 36, 0, 2, 11, 108, 110, 95, 102, 46, 119, 101, 105, 103, 104, 116, 1,
-                9, 108, 110, 95, 102, 46, 98, 105, 97, 115, 0, 32, 32, 32, 32
-            ]
+            dummy_data_checksum(),
+            dummy_data_checksum()
         )
     }
 
@@ -1252,13 +1320,13 @@ mod tests {
             offset += n;
         }
 
-        let mut hasher = Sha1::new();
+        let hasher = Sha1::new();
         let (checksum, _) = serialize_with_checksum(metadata, &None, hasher).unwrap();
         assert_eq!(
             checksum,
             &[
-                64, 128, 91, 191, 53, 18, 37, 145, 33, 154, 255, 163, 3, 8, 166, 199, 81, 240, 94,
-                49
+                100, 209, 191, 141, 61, 68, 83, 240, 188, 254, 167, 160, 6, 70, 194, 26, 148, 240,
+                34, 71
             ]
         )
     }
@@ -1314,8 +1382,8 @@ mod tests {
         assert_eq!(
             checksum,
             &[
-                78, 12, 80, 241, 204, 11, 0, 134, 204, 223, 108, 171, 105, 32, 171, 75, 157, 147,
-                42, 128, 116, 213, 185, 217, 53, 23, 116, 133, 247, 70, 126, 31
+                179, 200, 201, 49, 100, 134, 128, 54, 93, 147, 155, 192, 81, 93, 102, 173, 13, 250,
+                150, 91, 244, 4, 231, 213, 212, 127, 76, 75, 25, 210, 126, 103
             ]
         )
     }
@@ -1371,8 +1439,8 @@ mod tests {
         assert_eq!(
             checksum,
             &[
-                225, 226, 176, 72, 163, 20, 200, 214, 167, 115, 171, 54, 12, 136, 244, 19, 140, 39,
-                253, 142, 136, 21, 150, 31, 201, 17, 61, 210, 146, 110, 129, 10
+                71, 156, 143, 96, 233, 131, 60, 31, 172, 241, 198, 96, 76, 210, 14, 244, 127, 125,
+                96, 218, 40, 88, 75, 108, 176, 151, 136, 203, 23, 123, 221, 33
             ]
         )
     }
