@@ -17,7 +17,7 @@
 </p>
 
 
-Another file format, to store your models, and "**tensors**".
+Another file format for storing your models and **"tensors"**, designed for speed with zero-copy access.
 
 ## Installation
 
@@ -48,10 +48,9 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 rustup update
 git clone https://github.com/GnosisFoundation/bintensors
 cd bintensors/bindings/python
-# Install maturin
-pipx install maturin
+pip install setuptools_rust
 # install
-maturin develop
+pip install -e .
 ```
 
 ## Getting Started
@@ -206,7 +205,7 @@ $$
 - Endianness: Little-endian. moment.
 - Order: ‘C’ or row-major.
 - Checksum over the bytes, giving the file a unique identiy.
-  - Allows distrituive networks to break, and validate the contents prior to building
+  - Allows distributive networks to validate distributive layers.
 
 ## Benefits
 
