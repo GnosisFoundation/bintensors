@@ -212,7 +212,7 @@ fn prepare<S: AsRef<str> + Ord + core::fmt::Display, V: View, I: IntoIterator<It
     let metadata: Metadata = Metadata::new(data_info.clone(), hmetadata)?;
     let mut metadata_buf = bincode::encode_to_vec(
         metadata,
-        bincode::config::standard().with_limit::<MAX_HEADER_SIZE>(),
+        bincode::config::standard().with_limit::<{ MAX_HEADER_SIZE }>(),
     )?;
     // Force alignment to 8 bytes with padding.
     let extra = (8 - metadata_buf.len() % 8) % 8;
@@ -544,13 +544,6 @@ pub struct Metadata {
     metadata: Option<HashMap<String, String>>,
     tensors: Vec<TensorInfo>,
     index_map: HashMap<String, usize>,
-}
-
-/// Helper struct used only for serialization deserialization
-#[derive(Encode, Decode)]
-struct HashMetadata {
-    metadata: Option<HashMap<String, String>>,
-    tensors: HashMap<String, TensorInfo>,
 }
 
 impl Metadata {
@@ -1117,26 +1110,28 @@ mod tests {
     #[cfg(feature = "std")]
     #[test]
     fn test_offset_attack() {
-        let mut tensors = HashMap::new();
+        let mut tensors = Vec::new();
+        let mut index_map = HashMap::new();
         let dtype = Dtype::F32;
         let shape = vec![2, 2];
         let data_offsets = (0, 16);
         for i in 0..10 {
-            tensors.insert(
-                format!("weight_{i}"),
-                TensorInfo {
-                    dtype,
-                    shape: shape.clone(),
-                    data_offsets,
-                },
-            );
+            let key = format!("weight_{i}");
+            tensors.push(TensorInfo {
+                dtype,
+                shape: shape.clone(),
+                data_offsets,
+            });
+            index_map.insert(key, i);
         }
 
-        let metadata = HashMetadata {
+        let metadata =  Metadata {
             metadata: None,
             tensors,
+            index_map
         };
 
+        println!("{metadata:?}");
         let serialized = bincode::encode_to_vec(metadata, bincode::config::standard()).unwrap();
         let n = serialized.len();
 
@@ -1146,12 +1141,12 @@ mod tests {
         f.write_all(&serialized).unwrap();
         f.write_all(b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0").unwrap();
         f.flush().unwrap();
-
+        
         let reloaded = std::fs::read(filename).unwrap();
         match BinTensors::deserialize(&reloaded) {
-            Err(BinTensorError::DecoderError(_)) => {
+            Err(BinTensorError::InvalidOffset(_)) => {
                 // Yes we have the correct error
-                std::fs::remove_file(filename).unwrap();
+                // std::fs::remove_file(filename).unwrap();
             }
             Err(err) => panic!("Unexpected error {err:?}"),
             Ok(_) => panic!("This should not be able to be deserialized"),
@@ -1221,7 +1216,7 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_header_non_utf8() {
+    fn test_invalid_header_non_valid() {
         let serialized = b"\x01\x00\x00\x00\x00\x00\x00\x00\xff";
         match BinTensors::deserialize(serialized) {
             Err(BinTensorError::DecoderError(_)) => {
@@ -1230,7 +1225,6 @@ mod tests {
             _ => panic!("This should not be able to be deserialized"),
         }
     }
-
 
     #[cfg(not(debug_assertions))]
     /// This should only return one Vec<u8>
