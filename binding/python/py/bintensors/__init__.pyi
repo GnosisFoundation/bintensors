@@ -10,7 +10,7 @@ def deserialize(bytes):
     Returns:
         (`List[str, Dict[str, Dict[str, any]]]`):
             The deserialized content is like:
-                [("tensor_name", {"shape": [2, 3], "dtype": "F32", "data": b"\0\0.." }), (...)]
+                [("tensor_name", {"shape": [2, 3], "dtype": "float32", "data": b"..." }), (...)]
     """
     pass
 
@@ -22,7 +22,7 @@ def serialize(tensor_dict, metadata=None):
     Args:
         tensor_dict (`Dict[str, Dict[Any]]`):
             The tensor dict is like:
-                {"tensor_name": {"dtype": "F32", "shape": [2, 3], "data": b"\0\0"}}
+                {"tensor_name": {"dtype": "float32", "shape": [2, 3], "data": b"...."}}
         metadata (`Dict[str, str]`, *optional*):
             The optional purely text annotations
 
@@ -61,7 +61,7 @@ class safe_open:
 
         framework (`str`):
             The framework you want you tensors in. Supported values:
-            `pt`, `tf`, `flax`, `numpy`.
+            `pt`, `numpy`.
 
         device (`str`, defaults to `"cpu"`):
             The device on which you want the tensors.
