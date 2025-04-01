@@ -16,9 +16,6 @@
     <a href="https://pypi.org/project/bintensors/"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/bintensors?logo=python"></a>
 </p>
 
->[!NOTE]
->This is a pre-release package and is currently undergoing testing. As we refine the format, changes may be introduced to improve performance and add new features. While we aim to ensure backward compatibility, adjustments to previous file versions may be necessary. Feedback and testing are welcome!
-
 Another file format for storing your models and **"tensors"**, designed for speed with zero-copy access.
 
 ## Installation
