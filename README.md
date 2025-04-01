@@ -205,7 +205,7 @@ $$
 - Endianness: Little-endian. moment.
 - Order: ‘C’ or row-major.
 - Checksum over the bytes, giving the file a unique identiy.
-  - Allows distributive networks to validate distributive layers.
+  - Allows distributive networks to validate distributed layers checksums.
 
 ## Benefits
 
