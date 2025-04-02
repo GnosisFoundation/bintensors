@@ -8,15 +8,13 @@
 
 <p align="center">
     <a href="https://github.com/GnosisFoundation/bintensors/blob/master/LICENCE.md"><img alt="GitHub" src="https://img.shields.io/badge/licence-MIT Licence-blue"></a>
-    <a href="https://github.com/GnosisFoundation/bintensors/actions/workflows/rust.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/GnosisFoundation/bintensors/actions/workflows/rust.yml?branch=master&logo=rust&logoColor=orange"></a>
-    <a href="https://github.com/GnosisFoundation/bintensors/actions/workflows/python.yml"><img alt="Action Build" src="https://img.shields.io/github/actions/workflow/status/GnosisFoundation/bintensors/actions/workflows/python.yml?branch=master&logo=python"></a>
     <a href="https://crates.io/crates/bintensors"><img alt="Crates.io Version" src="https://img.shields.io/crates/v/bintensors"></a>
     <a href="https://docs.rs/bintensors"><img alt="docs.rs" src="https://img.shields.io/badge/rust-docs.rs-lightgray?logo=rust&logoColor=orange"></a>
     <a href="https://pypi.org/project/bintensors/"><img alt="PyPI" src="https://img.shields.io/pypi/v/bintensors"></a>
     <a href="https://pypi.org/project/bintensors/"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/bintensors?logo=python"></a>
 </p>
 
-Another file format for storing your models and **"tensors"**, designed for speed with zero-copy access.
+Another file format for storing your models and **"tensors"**, in a binary encoded format, designed for speed with zero-copy access.
 
 ## Installation
 
@@ -73,9 +71,9 @@ with safe_open("model.bt", framework="pt", device="cpu") as f:
 
 ## Overview
 
-This project initially started as an exploration of the `safetensors` file format, primarily to gain a deeper understanding of an ongoing parent project of distributing models over a subnet. While the format itself is relatively intuitive and well-implemented, it leads to some consideration regarding the use of `serde_json` for storing metadata.
+This project initially started as an exploration of the `safetensors` file format, primarily to gain a deeper understanding of an ongoing parent project of mine, on distributing models over a subnet. While the format itself is relatively intuitive and well-implemented, it leads to some consideration regarding the use of `serde_json` for storing metadata.
 
-Although the decision by the Hugging Face `safetensors` development team to utilize `serde_json` is understandable, such as readability of file, I questioned the necessity of this approach. Given the complexity of modern models, which can contain thousands of layers, it seems inefficient to store metadata in a human-readable format. In many instances, such metadata might be more appropriately stored in a more compact, optimized format.
+Although the decision by the Hugging Face `safetensors` development team to utilize `serde_json` is understandable, such as for file readability, I questioned the necessity of this approach. Given the complexity of modern models, which can contain thousands of layers, it seems inefficient to store metadata in a human-readable format. In many instances, such metadata might be more appropriately stored in a more compact, optimized format.
 
 **TDLR** why not just use a more otimized serde such as `bincode`.
 
@@ -93,9 +91,11 @@ Although the decision by the Hugging Face `safetensors` development team to util
   </picture>
 </p>
 
-The incorporation of the `bincode` library resulted in a substantial performance improvement in deserialization, which was somewhat expected, bench code can be found in `bincode/bench/benchmark.rs`, to which we ran two separate tests on each repo running a simple benchmark on comparing both serializations of model tests conducted on both `safesensors` and `bintensors` within the Rust only the implementation. Specifically, deserialization performance nearly tripled, as shown in the figure above. This is a remarkable enhancement, though it begs the question of why.
+Incorporating the `bincode` library led to a significant performance boost in deserialization, nearly tripling its speed—an improvement that was somewhat expected. Benchmarking code can be found in `bincode/bench/benchmark.rs`, where we conducted two separate tests per repository, comparing the serialization performance of model tests in safesensors and bintensors within the Rust-only implementation. The results, as shown in the figure above, highlight the substantial gains achieved.
 
-To better understand the underlying reasons for such a significant improvement, a further investigation was carried out by analyzing the call stack. The goal was to compare the performance characteristics of `serde_json` and `bincode`. In order to facilitate this comparison, we decided to generate a flame graph, to trace the function calls, providing a detailed visualization of the execution paths, to understand better if there could be some hold-up within the serde_json deserializer. The results of this experiment are illustrated in the figures below. Note this was only run on a MacOS, hopefully at a later date I would like to perform this same experiment on other operating systems to compare, though it will likely hold similar results.
+To better understand the factors behind this improvement, we analyzed the call stack, comparing the performance characteristics of `serde_json` and `bincode`. To facilitate this, we generated a flame graph to visualize execution paths and identify potential bottlenecks in the `serde_json` deserializer. The findings are illustrated in the figures below.
+
+This experiment was conducted on macOS, and while the results are likely consistent across platforms, I plan to extend the analysis to other operating systems for further validation.
 
 <p align="center">
   <picture>
