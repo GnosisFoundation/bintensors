@@ -264,7 +264,7 @@ fn prepare_with_checksum<
         offset += n;
         hmetadata.push((name.to_string(), tensor_info));
         // infer digest order
-        hasher.update(&tensor.data().as_ref());
+        hasher.update(tensor.data().as_ref());
         tensors.push(tensor);
     }
 
@@ -389,7 +389,7 @@ pub struct BinTensors<'data> {
     data: &'data [u8],
 }
 
-impl<'data> core::fmt::Debug for BinTensors<'data> {
+impl core::fmt::Debug for BinTensors<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "BinTensors {{ {:?} }}", self.metadata)
     }
@@ -790,7 +790,6 @@ impl Dtype {
 
 #[cfg(test)]
 mod tests {
-    use core::usize;
 
     use super::*;
     use crate::slice::IndexOp;
