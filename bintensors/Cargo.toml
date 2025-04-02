@@ -1,6 +1,6 @@
 [package]
 name = "bintensors"
-version = "0.0.1-alpha.2"
+version = "0.0.1-alpha.3"
 edition = "2024"
 license = "MIT"
 rust-version = "1.85"
@@ -51,4 +51,4 @@ name = "benchmark"
 harness = false
 
 [package.metadata.docs.rs]
-rustdoc-args = ["--html-in-header", "../docs/katex.html"]
+rustdoc-args = ["--html-in-header", "./docs/katex.html"]
