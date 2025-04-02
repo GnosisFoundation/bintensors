@@ -35,20 +35,22 @@ def encode_unsigned_variant_encoding(number: int) -> bytes:
         return b"\xfd" + number.to_bytes(8, "little")
     elif number > 0xFFFF:
         return b"\xfc" + number.to_bytes(4, "little")
-    elif number > 0xFa:
+    elif number > 0xFA:
         return b"\xfb" + number.to_bytes(2, "little")
     else:
         return number.to_bytes(1, "little")
 
 
-def encode_tensor_info(dtype: str, shape: Tuple[int, ...], offset: Tuple[int, int]) -> List[bytes]:
+def encode_tensor_info(
+    dtype: str, shape: Tuple[int, ...], offset: Tuple[int, int]
+) -> List[bytes]:
     """Encodes the struct TensorInfo into byte buffer"""
     if dtype not in _DTYPE:
         raise ValueError(f"Unsupported dtype: {dtype}")
 
     # flatten out the tensor info
     layout = chain([_DTYPE[dtype], len(shape)], shape, offset)
-    return b''.join(list(map(encode_unsigned_variant_encoding, layout)))
+    return b"".join(list(map(encode_unsigned_variant_encoding, layout)))
 
 
 def encode_hash_map(index_map: Dict[str, int]) -> List[bytes]:
@@ -64,7 +66,7 @@ def encode_hash_map(index_map: Dict[str, int]) -> List[bytes]:
         for k, v in index_map.items()
     )
 
-    return b''.join(chain([length], hash_map_layout))
+    return b"".join(chain([length], hash_map_layout))
 
 
 def create_payload(size: int):
@@ -73,17 +75,19 @@ def create_payload(size: int):
     tensor_chunk_length = shape[0] * shape[1] * 4  # Size of a tensor buffer
 
     length = encode_unsigned_variant_encoding(size)
-    
+
     # Create tensor info buffer
-    tensor_info_buffer = b''.join(encode_tensor_info("F32", shape, (0, tensor_chunk_length)) for _ in range(size))
+    tensor_info_buffer = b"".join(
+        encode_tensor_info("F32", shape, (0, tensor_chunk_length)) for _ in range(size)
+    )
     layout_tensor_info = length + tensor_info_buffer
 
     # Create hash map layout
     hash_map_layout = encode_hash_map({f"weight_{i}": i for i in range(size)})
 
     # Construct full layout
-    layout = b'\0' + layout_tensor_info + hash_map_layout
-    layout += b' ' * (((8 - len(layout)) % 8) % 8)
+    layout = b"\0" + layout_tensor_info + hash_map_layout
+    layout += b" " * (((8 - len(layout)) % 8) % 8)
     n = len(layout)
     n_header = n.to_bytes(8, "little")
 
@@ -98,6 +102,5 @@ def create_payload(size: int):
 
 if __name__ == "__main__":
     create_payload(5)
-    print(f"The file {filename} is {os.path.getsize(filename) / 10_000_00} Mb")    
+    print(f"The file {filename} is {os.path.getsize(filename) / 10_000_00} Mb")
     load_file(filename)
-    

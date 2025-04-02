@@ -15,7 +15,12 @@ def create_payload():
     n = shape[0] * shape[1] * 4
 
     metadata = {
-        f"weight_{i}": {"dtype": "float32", "shape": shape, "data_offsets": [n * i, (n * i) + n], "data": b"\0" * n}
+        f"weight_{i}": {
+            "dtype": "float32",
+            "shape": shape,
+            "data_offsets": [n * i, (n * i) + n],
+            "data": b"\0" * n,
+        }
         for i in range(1000 * 1000 * 10)
     }
 
@@ -32,7 +37,7 @@ start = datetime.datetime.now()
 try:
     test = load_file(filename)
 except BintensorError as e:
-    os.remove(filename) 
+    os.remove(filename)
     print(f"Throw an expected error: {e}")
 # Header file exception should be thrown and should not reach this code
 # This code below should not run...
