@@ -49,6 +49,9 @@ pub enum BinTensorError {
     /// The metadata contains information (shape or shape * dtype size) which lead to an
     /// arithmetic overflow. This is most likely an error in the file.
     ValidationOverflow,
+    /// The metadata contains a mismatch between the index map and tensor info,  
+    /// leading to unnecessary memory allocation. This is likely due to file tampering.
+    ValidationMismatch,
 }
 
 #[cfg(feature = "std")]
@@ -572,6 +575,9 @@ impl Metadata {
     }
 
     fn validate(&self) -> Result<usize, BinTensorError> {
+        if self.index_map.len() != self.tensors.len() {
+            return Err(BinTensorError::ValidationMismatch);
+        }
         let mut start = 0;
         for (i, info) in self.tensors.iter().enumerate() {
             let (s, e) = info.data_offsets;
