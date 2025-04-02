@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-    <img alt="bintensors" src="https://github.com/GnosisFoundation/bintensors/blob/master/.github/assets/bt_banner.png?raw=true" style="max-width: 100%;">
+    <img alt="bintensors" src="https://github.com/GnosisFoundation/bintensors/blob/master/.github/assets/bt_banner.png" style="max-width: 100%;">
   </picture>
 </p>
 
