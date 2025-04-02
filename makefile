@@ -1,8 +1,8 @@
 # Define variables
 ROOT_DIR := $(shell pwd)
-TARGET_DIR := $(ROOT_DIR)/../docs
-KATEX_HEADER := $(ROOT_DIR)/docs/katex.html
 DOCS_DIR := $(ROOT_DIR)/bintensors
+TARGET_DIR := $(DOCS_DIR)/docs
+KATEX_HEADER := $(DOCS_DIR)/docs/katex.html
 
 # Ensure the target directory exists
 $(TARGET_DIR):
