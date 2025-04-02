@@ -8,7 +8,6 @@ authors = ["Luca Vivona"]
 readme = "README.md"
 keywords = [
     "bintensors",
-    "safetensors",
     "Tensors",
     "Pytorch",
     "Numpy",
