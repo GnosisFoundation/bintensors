@@ -60,8 +60,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = 'https://github.com/GnosisFoundation/bintensor'
-Source = 'https://github.com/GnosisFoundation/bintensor'
+Homepage = 'https://github.com/GnosisFoundation/bintensors'
+Source = 'https://github.com/GnosisFoundation/bintensors'
 
 [tool.maturin]
 python-source = "py"
