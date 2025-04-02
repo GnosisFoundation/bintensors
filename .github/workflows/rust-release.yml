@@ -22,12 +22,6 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Cache Cargo Registry
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: ubuntu-latest-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
-
       - name: Dry Run Publish package rust
         working-directory: ./bintensors
         run: cargo publish --dry-run

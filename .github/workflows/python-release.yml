@@ -43,13 +43,6 @@ jobs:
           args: --release --out dist --manifest-path binding/python/Cargo.toml
           sccache: 'true'
           manylinux: auto
-      - name: Build free-threaded wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist --manifest-path binding/python/Cargo.toml -i python3.13t
-          sccache: 'true'
-          manylinux: auto
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -78,14 +71,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
-          args: --release --out dist --manifest-path binding/python/Cargo.toml
-          sccache: 'true'
-          manylinux: musllinux_1_2
-      - name: Build free-threaded wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist --manifest-path binding/python/Cargo.toml -i python3.13t
+          args: --release --out dist --manifest-path bindings/python/Cargo.toml
           sccache: 'true'
           manylinux: musllinux_1_2
       - name: Upload wheels
@@ -115,12 +101,6 @@ jobs:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --manifest-path binding/python/Cargo.toml
           sccache: 'true'
-      - name: Build free-threaded wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist --manifest-path binding/python/Cargo.toml -i python3.13t
-          sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -146,12 +126,6 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist --manifest-path binding/python/Cargo.toml
-          sccache: 'true'
-      - name: Build free-threaded wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          args: --release --out dist --manifest-path binding/python/Cargo.toml -i python3.13t
           sccache: 'true'
       - name: Upload wheels
         uses: actions/upload-artifact@v4
