@@ -27,7 +27,19 @@ authors = [
     {name = 'Luca Vivona', email = "lucavivona01@gmail.com"}
 ]
 readme = {file = "README.md", content-type = "text/markdown"}
-
+description = """
+bintensors is a high-performance binary tensor serialization 
+format designed to be faster than safetensors by eliminating 
+JSON metadata overhead. Instead of using JSON for metadata storage, 
+bintensors employs a compact binary header, reducing parsing time and improving I/O efficiency. 
+The format begins with an 8-byte unsigned integer (u64), indicating the size of the binary header. 
+This header contains essential tensor metadata, including the data type (dtype), 
+the shape of the tensor stored as a length-prefixed list, 
+and data offsets specifying where each tensor's raw values are stored within the file. 
+An index map is also included for named tensor lookups. With its efficient structure, 
+bintensors provides a fast and lightweight alternative for serializing and deserializing large models, 
+making it ideal for machine learning, scientific computing, and other high-performance applications.
+"""
 [project.optional-dependencies]
 numpy = ["numpy>=1.21.6"]
 torch = [
