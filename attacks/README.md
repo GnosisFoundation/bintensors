@@ -24,3 +24,11 @@ This attempt assumes the existence of a service that hosts such files. In an eff
 ### Attempt 3
 
 One of my favourite proposed attacks against `SafeTensors` and this format involves overlapping offsets—a simple yet elegant exploit. The mitigation is straightforward: enforce strict validation of tensor offsets. Any attempt to exceed buffer boundaries or define overlapping regions should be rejected. The tensor buffer should function as a contiguous sequence over a subset set of $\{0, \dots N\}$, ensuring data integrity and preventing unintended memory access.
+
+### Attempt 4 
+
+This format vulnerability was unexpected and prompted a thorough review, resulting in [commit](https://github.com/GnosisFoundation/bintensors/commit/032826e369d301b49eb264090581e24198d3a4ed) to properly validate the issue. The root cause lies in tensor_info entries exceeding their index_map counterparts, leading to potential memory allocation mismatches. To mitigate this risk, we introduced a validation check: if the size of tensor_info exceeds that of index_map, the format is immediately deemed invalid.
+
+This issue is specific to BinTensors and can only arise if the file has been manually altered.
+
+An alternative approach would be to project the data into a format that preserves order, similar to how SafeTensors uses Metadata to construct HashMetadata before serialization. However, in our testing, this method resulted in a ~40% degradation in deserialization performance while providing only a ~1% improvement in serialization efficiency. Given these trade-offs, we opted for the validation-based approach.

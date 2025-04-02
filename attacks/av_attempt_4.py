@@ -62,19 +62,26 @@ def encode_hash_map(index_map: Dict[str, int]) -> List[bytes]:
 
     return b"".join(chain([length], hash_map_layout))
 
-
-filename = "bintensors_abuse_attempt_3.bt"
+filename = "bintensors_abuse_attempt_4.bt"
 
 
 def create_payload(size: int):
     """Generates a binary payload with tensor metadata and hash map layout."""
+    assert size > 1, "Size must be greater then 1 for this payload function to work"
     shape = (2, 2)
     tensor_chunk_length = shape[0] * shape[1] * 4  # Size of a tensor buffer
 
-    length = encode_unsigned_variant_encoding(size)
+    length = encode_unsigned_variant_encoding(size - 1)
 
     # Create tensor info buffer
-    tensor_info_buffer = b"".join(encode_tensor_info("F32", shape, (0, tensor_chunk_length)) for _ in range(size))
+    tensor_info_buffer = b"".join(
+        encode_tensor_info(
+            "F32",
+            shape,
+            (i * tensor_chunk_length, i * tensor_chunk_length + tensor_chunk_length),
+        )
+        for i in range(size - 1)
+    )
     layout_tensor_info = length + tensor_info_buffer
 
     # Create hash map layout
@@ -90,12 +97,12 @@ def create_payload(size: int):
     with open(filename, "wb") as f:
         f.write(n_header)
         f.write(layout)
-        f.write(b"\0" * tensor_chunk_length)
+        f.write(b"\0" * (tensor_chunk_length * size))
 
     print(f"Payload written to {filename}")
 
 
 if __name__ == "__main__":
-    create_payload(5)
+    create_payload(2)
     print(f"The file {filename} is {os.path.getsize(filename) / 10_000_00} Mb")
-    load_file(filename)
+    print(load_file(filename))
