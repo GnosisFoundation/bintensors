@@ -6,10 +6,9 @@
 name: Python PyPi Release
 
 on:
-    workflow_run:
-      workflows: ["Python PyPi Release"]
-      types:
-        - completed
+  push:
+    tags:
+      - v*
 
 permissions:
   contents: read
