@@ -27,7 +27,6 @@ authors = [
     {name = 'Luca Vivona', email = "lucavivona01@gmail.com"}
 ]
 readme = {file = "README.md", content-type = "text/markdown"}
-description = "bintensors is a high-performance binary tensor serialization format designed to be faster than safetensors by eliminating JSON metadata overhead."
 [project.optional-dependencies]
 numpy = ["numpy>=1.21.6"]
 torch = [
