@@ -5,10 +5,12 @@
 #
 name: Python PyPi Release
 
+# TODO: revert back to v when release 0.1.0
+# to sync the rust, and the python binding
 on:
   push:
     tags:
-      - v*
+      - py-v*
 
 permissions:
   contents: read

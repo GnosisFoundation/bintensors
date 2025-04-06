@@ -4,10 +4,9 @@ env:
   CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
 
 on:
-  workflow_run:
-    workflows: ["Python PyPi Release"]
-    types:
-      - completed
+  push:
+    tags:
+      - rs-v*
 
 
 jobs:
