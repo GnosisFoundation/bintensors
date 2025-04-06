@@ -1,6 +1,6 @@
 #![deny(missing_docs)]
 #![doc(
-    html_logo_url = "https://github.com/GnosisFoundation/bintensors/blob/master/.github/assets/bintensors-logo.png?raw=true"
+    html_logo_url = "https://raw.githubusercontent.com/GnosisFoundation/bintensors/refs/heads/master/.github/assets/bintensors-logo.png"
 )]
 #![doc = include_str!("../DOC_README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
