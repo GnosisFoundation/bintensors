@@ -51,8 +51,8 @@ testing = [
 all = [
     "bintensors[torch]",
     "bintensors[numpy]",
-    "safetensors[quality]",
-    "safetensors[testing]",
+    "bintensors[quality]",
+    "bintensors[testing]",
 ]
 dev = [
     "bintensors[all]",
