@@ -185,7 +185,6 @@ _TYPES = {
     "F64": np.float64,
     "F32": np.float32,
     "F16": np.float16,
-    "BF16": np.bfloat16,
     "I64": np.int64,
     "U64": np.uint64,
     "I32": np.int32,
