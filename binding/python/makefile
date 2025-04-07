@@ -16,7 +16,7 @@ help:
 	@echo "  clean     - Remove build artifacts and cache files"
 	@echo "  test      - Run all tests"
 	@echo "  lint      - Run Black lint check on all source files"
-	@echo "  check 	   - Run Black lint check without modifying files"
+	@echo "  check     - Run Black lint check without modifying files"
 	@echo "  format    - Format all source files with Black"
 	@echo "  format-dir DIR=path/to/dir - Format files in specific directory"
 
@@ -26,7 +26,7 @@ clean:
 	find . -type f -name "*.pyc" -delete
 
 test:
-	$(PYTEST) tests/
+	$(PYTEST) -sv tests/
 
 lint: 
 	$(BLACK) $(BLACK_OPTS) $(SRC_DIRS)
