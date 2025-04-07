@@ -41,11 +41,10 @@ quality = [
 ]
 testing = [
     "bintensors[numpy]",
-    "h5py>=3.7.0",
+    "bintensors[torch]",
     "setuptools_rust>=1.5.2",
     "pytest>=7.2.0",
     "pytest-benchmark>=4.0.0",
-    # "python-afl>=0.7.3",
     "hypothesis>=6.70.2",
 ]
 all = [
