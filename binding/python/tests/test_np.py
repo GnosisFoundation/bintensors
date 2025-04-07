@@ -104,26 +104,21 @@ def test_invalid_tensor_dict_raises_error():
 def test_save_file_and_load_file_consistency():
     tensor_dict = create_gpt2_numpy_dict(1)
     filename = ""
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+    loaded_dict = {}
+    with tempfile.NamedTemporaryFile() as tmp:
         filename = tmp.name
-
-    try:
-        save_file(tensor_dict, filename)
-        loaded_dict = load_file(filename)
-
-        for key, value in tensor_dict.items():
-            assert _compare_np_array(loaded_dict[key], value)
-    finally:
-        if os.path.exists(filename):
-            os.remove(filename)
+        try:
+            save_file(tensor_dict, filename)
+            loaded_dict = load_file(filename)
+        finally:
+            for key, value in tensor_dict.items():
+                assert _compare_np_array(loaded_dict[key], value)
 
 
 def test_safe_open_access_and_metadata():
     tensor_dict = create_gpt2_numpy_dict(1)
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+    with tempfile.NamedTemporaryFile() as tmp:
         filename = tmp.name
-
-    try:
         # save file into tempfile
         save_file(tensor_dict, filename)
 
@@ -132,22 +127,15 @@ def test_safe_open_access_and_metadata():
             assert model.get_tensor("h.0.ln_1.weight") is not None
             assert model.get_tensor("h.0.ln_1.bias") is not None
             assert model.metadata() is None
-    finally:
-        if os.path.exists(filename):
-            os.remove(filename)
 
 
 def test_safe_open_access_with_metadata():
     tensor_dict = create_gpt2_numpy_dict(1)
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+    with tempfile.NamedTemporaryFile() as tmp:
         filename = tmp.name
 
-    try:
         save_file(tensor_dict, filename, metadata={"hello": "world"})
         with safe_open(filename, "numpy") as model:
             assert model.get_tensor("h.0.ln_1.weight") is not None
             assert model.get_tensor("h.0.ln_1.bias") is not None
             assert model.metadata()["hello"] == "world"
-    finally:
-        if os.path.exists(filename):
-            os.remove(filename)

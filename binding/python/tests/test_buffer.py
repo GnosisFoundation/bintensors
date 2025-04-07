@@ -233,4 +233,3 @@ def test_missmatch_length_of_metadata():
         # this is not a valid since the metadata
         # size doe not match as it too big
         _ = load(buffer)
-
