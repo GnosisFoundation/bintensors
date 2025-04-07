@@ -106,7 +106,7 @@ def test_pt_invalid_tensor_dict_raises_error():
 def test_pt_save_file_and_load_file_consistency():
     tensor_dict = create_gpt2_tensors_dict(1)
     filename = ""
-    with tempfile.NamedTemporaryFile() as tmp:
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
         filename = tmp.name
         save_file(tensor_dict, filename)
         loaded_dict = load_file(filename)
