@@ -178,9 +178,6 @@ def load_file(filename: Union[str, os.PathLike]) -> Dict[str, np.ndarray]:
 
 
 # np.float8 formats require 2.1; we do not support these dtypes on earlier versions
-_float8_e4m3fn = getattr(np, "float8_e4m3fn", None)
-_float8_e5m2 = getattr(np, "float8_e5m2", None)
-
 _TYPES = {
     "F64": np.float64,
     "F32": np.float32,
@@ -193,9 +190,7 @@ _TYPES = {
     "U16": np.uint16,
     "I8": np.int8,
     "U8": np.uint8,
-    "BOOL": np.bool,
-    "F8_E4M3": _float8_e4m3fn,
-    "F8_E5M2": _float8_e5m2,
+    "BOOL": bool,
 }
 
 

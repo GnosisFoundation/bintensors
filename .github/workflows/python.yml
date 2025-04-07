@@ -87,8 +87,8 @@ jobs:
           black --check --line-length 119 --target-version py35 py/bintensors
 
     # TODO: uncomment this after adding formal pytest
-    #   - name: Run tests
-    #     run: |
-    #       cargo test
-    #       pip install .[testing]
-    #       pytest -sv tests/
+      - name: Run tests
+        run: |
+          cargo test
+          pip install .[testing]
+          pytest -sv tests/
