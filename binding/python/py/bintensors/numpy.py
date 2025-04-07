@@ -84,7 +84,7 @@ def save_file(
     ```
     """
     flattened = {k: {"dtype": v.dtype.name, "shape": v.shape, "data": _tobytes(v)} for k, v in tensor_dict.items()}
-    serialize_file(flattened, filename, metadata=metadata)
+    serialize_file(filename, flattened, metadata=metadata)
 
 
 def save_with_checksum(
