@@ -2,7 +2,6 @@ import pytest
 import struct
 
 import torch
-import tempfile
 from typing import List, Dict, Tuple
 from itertools import chain
 

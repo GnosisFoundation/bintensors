@@ -117,7 +117,7 @@ def test_pt_save_file_and_load_file_consistency():
 
 def test_pt_safe_open_access_and_metadata():
     tensor_dict = create_gpt2_tensors_dict(1)
-    with tempfile.NamedTemporaryFile() as tmp:
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
         filename = tmp.name
         save_file(tensor_dict, filename)
         with safe_open(filename, "pt") as model:

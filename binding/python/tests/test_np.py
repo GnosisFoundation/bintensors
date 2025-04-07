@@ -105,7 +105,7 @@ def test_save_file_and_load_file_consistency():
     tensor_dict = create_gpt2_numpy_dict(1)
     filename = ""
     loaded_dict = {}
-    with tempfile.NamedTemporaryFile() as tmp:
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
         filename = tmp.name
         try:
             save_file(tensor_dict, filename)
@@ -117,7 +117,7 @@ def test_save_file_and_load_file_consistency():
 
 def test_safe_open_access_and_metadata():
     tensor_dict = create_gpt2_numpy_dict(1)
-    with tempfile.NamedTemporaryFile() as tmp:
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
         filename = tmp.name
         # save file into tempfile
         save_file(tensor_dict, filename)
@@ -131,7 +131,7 @@ def test_safe_open_access_and_metadata():
 
 def test_safe_open_access_with_metadata():
     tensor_dict = create_gpt2_numpy_dict(1)
-    with tempfile.NamedTemporaryFile() as tmp:
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
         filename = tmp.name
 
         save_file(tensor_dict, filename, metadata={"hello": "world"})
