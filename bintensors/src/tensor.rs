@@ -3,8 +3,6 @@ use crate::lib::{Cow, HashMap, String, ToString, Vec};
 use crate::slice::{InvalidSlice, SliceIterator, TensorIndexer};
 use bincode::{Decode, Encode};
 use digest::Digest;
-#[cfg(not(feature = "std"))]
-use serde::{Deserialize, Serialize};
 #[cfg(feature = "std")]
 use std::io::Write;
 
@@ -544,31 +542,14 @@ impl<'data> BinTensors<'data> {
 
 /// The stuct representing the header of bintensor files which allow
 /// indexing into the raw byte-buffer array and how to interpret it.
-#[cfg_attr(feature = "std", derive(Debug, Clone, Encode, Decode))]
-#[cfg_attr(not(feature = "std"), derive(Debug, Serialize, Deserialize))]
+#[derive(Debug, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Clone))]
 pub struct Metadata {
+    #[bincode(with_serde)]
     metadata: Option<HashMap<String, String>>,
     tensors: Vec<TensorInfo>,
+    #[bincode(with_serde)]
     index_map: HashMap<String, usize>,
-}
-
-#[cfg(not(feature = "std"))]
-impl bincode::Encode for Metadata {
-    fn encode<E: bincode::enc::Encoder>(
-        &self,
-        encoder: &mut E,
-    ) -> Result<(), bincode::error::EncodeError> {
-        bincode::serde::encode_into_writer(self, encoder.writer(), bincode::config::standard())
-    }
-}
-
-#[cfg(not(feature = "std"))]
-impl<Context> bincode::Decode<Context> for Metadata {
-    fn decode<D: bincode::de::Decoder<Context = Context>>(
-        decoder: &mut D,
-    ) -> core::result::Result<Self, bincode::error::DecodeError> {
-        bincode::serde::decode_from_reader(decoder.reader(), bincode::config::standard())
-    }
 }
 
 impl Metadata {
@@ -739,8 +720,8 @@ impl<'data> TensorView<'data> {
 /// A single tensor information.
 /// Endianness is assumed to be little endian
 /// Ordering is assumed to be 'C'.
-#[cfg_attr(feature = "std", derive(Debug, Clone, Encode, Decode))]
-#[cfg_attr(not(feature = "std"), derive(Debug, Serialize, Deserialize))]
+#[derive(Debug, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Clone))]
 pub struct TensorInfo {
     /// The type of each element of the tensor
     pub dtype: Dtype,
@@ -751,24 +732,8 @@ pub struct TensorInfo {
 }
 
 /// The various available dtypes. They MUST be in increasing alignment order
-#[cfg_attr(
-    feature = "std",
-    derive(Debug, Encode, Decode, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)
-)]
-#[cfg_attr(
-    not(feature = "std"),
-    derive(
-        Debug,
-        Clone,
-        Copy,
-        PartialEq,
-        Eq,
-        Ord,
-        PartialOrd,
-        Serialize,
-        Deserialize
-    )
-)]
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Encode, Decode)]
 #[non_exhaustive]
 pub enum Dtype {
     /// Boolan type
