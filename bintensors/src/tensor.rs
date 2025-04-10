@@ -3,10 +3,10 @@ use crate::lib::{Cow, HashMap, String, ToString, Vec};
 use crate::slice::{InvalidSlice, SliceIterator, TensorIndexer};
 use bincode::{Decode, Encode};
 use digest::Digest;
+#[cfg(not(feature = "std"))]
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "std")]
 use std::io::Write;
-#[cfg(not(feature = "std"))]
-use serde::{Serialize, Deserialize};
 
 const MIN_HEADER_SIZE: usize = 8;
 const MAX_HEADER_SIZE: usize = 100_000_000;
@@ -552,11 +552,13 @@ pub struct Metadata {
     index_map: HashMap<String, usize>,
 }
 
-
 #[cfg(not(feature = "std"))]
 impl bincode::Encode for Metadata {
-    fn encode<E: bincode::enc::Encoder>(&self, encoder: &mut E) -> Result<(), bincode::error::EncodeError> {
-        bincode::serde::encode_into_writer(&self, encoder.writer(), bincode::config::standard())
+    fn encode<E: bincode::enc::Encoder>(
+        &self,
+        encoder: &mut E,
+    ) -> Result<(), bincode::error::EncodeError> {
+        bincode::serde::encode_into_writer(self, encoder.writer(), bincode::config::standard())
     }
 }
 
@@ -569,13 +571,11 @@ impl<Context> bincode::Decode<Context> for Metadata {
     }
 }
 
-
 impl Metadata {
     fn new(
         metadata: Option<HashMap<String, String>>,
         tensors: Vec<(String, TensorInfo)>,
     ) -> Result<Self, BinTensorError> {
-        
         let mut index_map = HashMap::with_capacity(tensors.len());
 
         let tensors: Vec<_> = tensors
@@ -752,7 +752,10 @@ pub struct TensorInfo {
 
 /// The various available dtypes. They MUST be in increasing alignment order
 #[derive(Debug, Encode, Decode, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
-#[cfg_attr(feature = "std", derive(Debug, Encode, Decode, Clone, Copy, PartialEq, Eq, Ord, PartialOrd))]
+#[cfg_attr(
+    feature = "std",
+    derive(Debug, Encode, Decode, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)
+)]
 #[cfg_attr(not(feature = "std"), derive(Serialize, Deserialize))]
 #[non_exhaustive]
 pub enum Dtype {
