@@ -751,12 +751,24 @@ pub struct TensorInfo {
 }
 
 /// The various available dtypes. They MUST be in increasing alignment order
-#[derive(Debug, Encode, Decode, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
 #[cfg_attr(
     feature = "std",
     derive(Debug, Encode, Decode, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)
 )]
-#[cfg_attr(not(feature = "std"), derive(Serialize, Deserialize))]
+#[cfg_attr(
+    not(feature = "std"),
+    derive(
+        Debug,
+        Clone,
+        Copy,
+        PartialEq,
+        Eq,
+        Ord,
+        PartialOrd,
+        Serialize,
+        Deserialize
+    )
+)]
 #[non_exhaustive]
 pub enum Dtype {
     /// Boolan type
