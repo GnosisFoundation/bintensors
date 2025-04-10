@@ -1,4 +1,4 @@
-bintensors/target
+**/target
 
 # <-- testing -->
 bintensors/proptest-regressions
