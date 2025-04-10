@@ -5,6 +5,8 @@ use bincode::{Decode, Encode};
 use digest::Digest;
 #[cfg(feature = "std")]
 use std::io::Write;
+#[cfg(not(feature = "std"))]
+use serde::{Serialize, Deserialize};
 
 const MIN_HEADER_SIZE: usize = 8;
 const MAX_HEADER_SIZE: usize = 100_000_000;
@@ -542,18 +544,38 @@ impl<'data> BinTensors<'data> {
 
 /// The stuct representing the header of bintensor files which allow
 /// indexing into the raw byte-buffer array and how to interpret it.
-#[derive(Debug, Clone, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Debug, Clone, Encode, Decode))]
+#[cfg_attr(not(feature = "std"), derive(Debug, Serialize, Deserialize))]
 pub struct Metadata {
     metadata: Option<HashMap<String, String>>,
     tensors: Vec<TensorInfo>,
     index_map: HashMap<String, usize>,
 }
 
+
+#[cfg(not(feature = "std"))]
+impl bincode::Encode for Metadata {
+    fn encode<E: bincode::enc::Encoder>(&self, encoder: &mut E) -> Result<(), bincode::error::EncodeError> {
+        bincode::serde::encode_into_writer(&self, encoder.writer(), bincode::config::standard())
+    }
+}
+
+#[cfg(not(feature = "std"))]
+impl<Context> bincode::Decode<Context> for Metadata {
+    fn decode<D: bincode::de::Decoder<Context = Context>>(
+        decoder: &mut D,
+    ) -> core::result::Result<Self, bincode::error::DecodeError> {
+        bincode::serde::decode_from_reader(decoder.reader(), bincode::config::standard())
+    }
+}
+
+
 impl Metadata {
     fn new(
         metadata: Option<HashMap<String, String>>,
         tensors: Vec<(String, TensorInfo)>,
     ) -> Result<Self, BinTensorError> {
+        
         let mut index_map = HashMap::with_capacity(tensors.len());
 
         let tensors: Vec<_> = tensors
@@ -717,7 +739,8 @@ impl<'data> TensorView<'data> {
 /// A single tensor information.
 /// Endianness is assumed to be little endian
 /// Ordering is assumed to be 'C'.
-#[derive(Debug, Clone, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Debug, Clone, Encode, Decode))]
+#[cfg_attr(not(feature = "std"), derive(Debug, Serialize, Deserialize))]
 pub struct TensorInfo {
     /// The type of each element of the tensor
     pub dtype: Dtype,
@@ -729,6 +752,8 @@ pub struct TensorInfo {
 
 /// The various available dtypes. They MUST be in increasing alignment order
 #[derive(Debug, Encode, Decode, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
+#[cfg_attr(feature = "std", derive(Debug, Encode, Decode, Clone, Copy, PartialEq, Eq, Ord, PartialOrd))]
+#[cfg_attr(not(feature = "std"), derive(Serialize, Deserialize))]
 #[non_exhaustive]
 pub enum Dtype {
     /// Boolan type
@@ -1151,7 +1176,7 @@ mod tests {
         match BinTensors::deserialize(&reloaded) {
             Err(BinTensorError::InvalidOffset(_)) => {
                 // Yes we have the correct error
-                // std::fs::remove_file(filename).unwrap();
+                std::fs::remove_file(filename).unwrap();
             }
             Err(err) => panic!("Unexpected error {err:?}"),
             Ok(_) => panic!("This should not be able to be deserialized"),

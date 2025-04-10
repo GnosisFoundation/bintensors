@@ -12,25 +12,28 @@ pub use tensor::serialize_to_file;
 pub use tensor::{serialize, serialize_with_checksum, BinTensorError, BinTensors, Dtype, View};
 
 // TODO: uncomment when all of no_std is ready
-// #[cfg(feature = "alloc")]
-// #[macro_use]
-// extern crate alloc;
+#[cfg(feature = "alloc")]
+#[macro_use]
+extern crate alloc;
 
-#[cfg(not(feature = "std"))]
-compile_error!("must have the `std` feature");
+#[cfg(all(feature = "std", feature = "alloc"))]
+compile_error!("must choose either the `std` or `alloc` feature, but not both.");
+#[cfg(all(not(feature = "std"), not(feature = "alloc")))]
+compile_error!("must choose either the `std` or `alloc` feature");
 
 /// A facade around all the types we need from the `std`, `core`, and `alloc`
 /// crates. This avoids elaborate import wrangling having to happen in every
 /// module.
 mod lib {
     // TODO: uncomment when add non-std
-    // #[cfg(not(feature = "std"))]
-    // mod no_stds {
-    //     pub use alloc::borrow::Cow;
-    //     pub use alloc::string::{String, ToString};
-    //     pub use alloc::vec::Vec;
-    //     pub use hashbrown::HashMap;
-    // }
+    #[cfg(not(feature = "std"))]
+    mod no_stds {
+        pub use alloc::borrow::Cow;
+        pub use alloc::string::{String, ToString};
+        pub use alloc::vec::Vec;
+        pub use hashbrown::HashMap;
+    }
+
     #[cfg(feature = "std")]
     mod stds {
         pub use std::borrow::Cow;
@@ -40,9 +43,8 @@ mod lib {
     }
 
     /// choose std or no_std to export by feature flag
-    // TODO: uncomment when add non-std
-    // #[cfg(not(feature = "std"))]
-    // pub use no_stds::*;
+    #[cfg(not(feature = "std"))]
+    pub use no_stds::*;
     #[cfg(feature = "std")]
     pub use stds::*;
 }
