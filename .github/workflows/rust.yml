@@ -42,9 +42,8 @@ jobs:
       - name: Run Tests
         run: cargo test --verbose
 
-      # TODO: uncomment when No-STD is completely stable, with bincode
-      # - name: Run No-STD Tests
-        # run: cargo test --no-default-features --features alloc --verbose
+      - name: Run No-STD Tests
+        run: cargo test --no-default-features --features alloc --verbose
 
       - name: Run Audit
         # RUSTSEC-2021-0145 is criterion so only within benchmarks
