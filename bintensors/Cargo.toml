@@ -6,13 +6,7 @@ license = "MIT"
 rust-version = "1.85"
 authors = ["Luca Vivona"]
 readme = "README.md"
-keywords = [
-    "bintensors",
-    "Tensors",
-    "Pytorch",
-    "Numpy",
-    "bincode",
-]
+keywords = ["bintensors", "Tensors", "Pytorch", "Numpy", "bincode"]
 repository = "https://github.com/GnosisFoundation/bintensors"
 description = """
 bintensors is a high-performance binary tensor serialization 
@@ -30,8 +24,11 @@ making it ideal for machine learning, scientific computing, and other high-perfo
 exclude = ["target/*", "Cargo.lock"]
 
 [dependencies]
-bincode = { version = "2.0.1", default-features = false, features = ["derive"] }
+bincode = { version = "2.0.1", default-features = false, features = ["derive", "serde"] }
+hashbrown = { version = "0.15.2", features = ["serde"], optional = true}
+serde = { version = "1.0.219", default-features = false, features = ["derive"] }
 digest = "0.10.7"
+
 
 [dev-dependencies]
 criterion = "0.5"
@@ -44,7 +41,8 @@ sha1 = "0.10.6"
 
 [features]
 default = ["std"]
-std = ["bincode/default"]
+std = ["bincode/std", "serde/std"]
+alloc = ["bincode/alloc", "serde/alloc", "hashbrown"]
 
 [[bench]]
 name = "benchmark"

@@ -542,10 +542,13 @@ impl<'data> BinTensors<'data> {
 
 /// The stuct representing the header of bintensor files which allow
 /// indexing into the raw byte-buffer array and how to interpret it.
-#[derive(Debug, Clone, Encode, Decode)]
+#[derive(Debug, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Clone))]
 pub struct Metadata {
+    #[bincode(with_serde)]
     metadata: Option<HashMap<String, String>>,
     tensors: Vec<TensorInfo>,
+    #[bincode(with_serde)]
     index_map: HashMap<String, usize>,
 }
 
@@ -717,7 +720,8 @@ impl<'data> TensorView<'data> {
 /// A single tensor information.
 /// Endianness is assumed to be little endian
 /// Ordering is assumed to be 'C'.
-#[derive(Debug, Clone, Encode, Decode)]
+#[derive(Debug, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Clone))]
 pub struct TensorInfo {
     /// The type of each element of the tensor
     pub dtype: Dtype,
@@ -728,7 +732,8 @@ pub struct TensorInfo {
 }
 
 /// The various available dtypes. They MUST be in increasing alignment order
-#[derive(Debug, Encode, Decode, Clone, Copy, PartialEq, Eq, Ord, PartialOrd)]
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Encode, Decode)]
 #[non_exhaustive]
 pub enum Dtype {
     /// Boolan type
@@ -1151,7 +1156,7 @@ mod tests {
         match BinTensors::deserialize(&reloaded) {
             Err(BinTensorError::InvalidOffset(_)) => {
                 // Yes we have the correct error
-                // std::fs::remove_file(filename).unwrap();
+                std::fs::remove_file(filename).unwrap();
             }
             Err(err) => panic!("Unexpected error {err:?}"),
             Ok(_) => panic!("This should not be able to be deserialized"),
