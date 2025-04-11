@@ -545,10 +545,10 @@ impl<'data> BinTensors<'data> {
 #[derive(Debug, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(Clone))]
 pub struct Metadata {
-    #[bincode(with_serde)]
+    #[cfg_attr(not(feature = "std"), bincode(with_serde))]
     metadata: Option<HashMap<String, String>>,
     tensors: Vec<TensorInfo>,
-    #[bincode(with_serde)]
+    #[cfg_attr(not(feature = "std"), bincode(with_serde))]
     index_map: HashMap<String, usize>,
 }
 
