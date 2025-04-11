@@ -1,6 +1,6 @@
 [package]
 name = "bintensors"
-version = "0.0.1-alpha.3"
+version = "0.0.1-dev"
 edition = "2024"
 license = "MIT"
 rust-version = "1.85"
@@ -24,7 +24,7 @@ making it ideal for machine learning, scientific computing, and other high-perfo
 exclude = ["target/*", "Cargo.lock"]
 
 [dependencies]
-bincode = { version = "2.0.1", default-features = false, features = ["derive", "serde"] }
+bincode = { version = "2.0.1", default-features = false, features = ["derive"] }
 hashbrown = { version = "0.15.2", features = ["serde"], optional = true}
 serde = { version = "1.0.219", default-features = false, features = ["derive"] }
 digest = "0.10.7"
@@ -42,7 +42,7 @@ sha1 = "0.10.6"
 [features]
 default = ["std"]
 std = ["bincode/std", "serde/std"]
-alloc = ["bincode/alloc", "serde/alloc", "hashbrown"]
+alloc = ["bincode/alloc", "bincode/serde", "serde/alloc", "hashbrown"]
 
 [[bench]]
 name = "benchmark"
