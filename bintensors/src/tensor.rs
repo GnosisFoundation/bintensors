@@ -720,8 +720,7 @@ impl<'data> TensorView<'data> {
 /// A single tensor information.
 /// Endianness is assumed to be little endian
 /// Ordering is assumed to be 'C'.
-#[derive(Debug, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Clone))]
+#[derive(Debug, Encode, Decode, Clone)]
 pub struct TensorInfo {
     /// The type of each element of the tensor
     pub dtype: Dtype,
