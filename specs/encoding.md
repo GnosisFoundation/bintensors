@@ -1,7 +1,7 @@
 # Standard BinTensors Specification
 
-> [!NOTE]
->This is a pre-release specification detailing the serialization format used within `BinTensors`, within that format we use default data types serialization methods, which you can find in `bincode` [specification](https://github.com/bincode-org/bincode/blob/trunk/docs/spec.md). As we refine the format, changes may be introduced to improve performance and add new features. While we aim to ensure backward compatibility, adjustments to previous file versions may be necessary.
+<!-- > [!NOTE]
+>This is a pre-release specification detailing the serialization format used within `BinTensors`, within that format we use default data types serialization methods, which you can find in `bincode` [specification](https://github.com/bincode-org/bincode/blob/trunk/docs/spec.md). As we refine the format, changes may be introduced to improve performance and add new features. While we aim to ensure backward compatibility, adjustments to previous file versions may be necessary. -->
 
 ## Preface
 
@@ -23,7 +23,7 @@ By default the seralization of the data types used are little-edian byte order. 
 
 <p align="center">
   <picture>
-    <img alt="bintensors" src="https://github.com/GnosisFoundation/bintensors/blob/master/.github/assets/endian.png" style="max-width: 100%;">
+    <img alt="bintensors" src="https://raw.githubusercontent.com/GnosisFoundation/bintensors/refs/heads/master/.github/assets/endian.png" style="max-width: 100%;">
   </picture>
   <br/>
 
@@ -185,11 +185,25 @@ assert_eq!(&encoded, &[0]); // Discriminant (1)
 // rest enums value follow..
 ```
 
-## HashMap
+Here’s a refined and clearer version of your section with an emphasis on the deterministic ordering of `BTreeMap`:
 
-If you're familiar with the `HashMap<K, V>` data structure, its serialization should be relatively straightforward. Like `Vec<T>`, we first encode the number of entries in the map. Then, each key-value pair is serialized sequentially.
+---
+
+## HashMap vs BTreeMap
+
+When working with map-like data structures such as `HashMap<K, V>` or `BTreeMap<K, V>`, their serialization behavior is similar in structure. Like a `Vec<T>`, the encoder first writes the number of key-value pairs, followed by each key and its associated value in sequence.
+
+However, an important distinction lies in ordering:  
+- `HashMap` does **not** guarantee the order of its entries.
+- `BTreeMap`, by contrast, maintains a **deterministic, sorted order** based on the keys.
+
+This deterministic ordering makes `BTreeMap` particularly useful when consistent serialization output is required, such as in checksumming, binary diffing, or reproducible builds.
+
+Here's an example of how a simple `HashMap<String, String>` would be serialized using `bincode`:
 
 ```rust
+use std::collections::HashMap;
+
 let mut data: HashMap<String, String> = HashMap::new();
 data.insert("hello".to_string(), "world".to_string());
 data.insert("hello1".to_string(), "world".to_string());
@@ -212,6 +226,7 @@ assert_eq!(
 );
 ```
 
+> ⚠️ Note: The actual key-value order in the encoded output may vary between runs if using `HashMap`. If reproducibility is important, prefer `BTreeMap`.
 
 ## Assembling the Format
 
@@ -227,106 +242,110 @@ assert_eq!(
   <br/>
 </p>
 
-Now that we've outlined the core serialization structures used in the `BinTensors` file format, let's examine how to properly interpret and reconstruct an actual binary buffer. The majority of serialization complexity is concentrated in the metadata portion.
+
+Now that we've outlined the core serialization structures used in the `BinTensors` file format, let's examine how to properly interpret and reconstruct an actual binary buffer. The majority of the serialization complexity is concentrated in the **metadata section**.
 
 Consider the following binary buffer:
 
 ```rust
-b"\x10\x00\x00\x00\x00\x00\x00\x00\x00\x01\x09\x02\x01\x04\x00\x10\x01\x04\x74\x65\x73\x74\x00\x20\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+b"\x18\x00\x00\x00\x00\x00\x00\x00\x00\x01\x08weight_1\x00\x02\x02\x02\x00\x04       \x00\x00\x00\x00";
 ```
 
-### Size Of Metadata (SofM)
+---
 
-The first 8 bytes represent the Size of Metadata (SofM), which indicates how many bytes to read for the metadata section:
+### 📦 Size Of Metadata Header (SofMH)
+
+The first 8 bytes represent the **Size of Metadata (SofMH)**, which tells us how many bytes to read for the metadata section:
 
 ```rust
-// Extract the Size of Metadata (SofM) from the first 8 bytes
+// Extract the Size of Metadata (SofMH) from the first 8 bytes
 let sofm = usize::from_le_bytes(buffer[..8].try_into().expect("expected 8 bytes"));
-// This yields 16 bytes as the metadata size
+// This yields 24 bytes as the header size
 ```
-### Metadata Reconstruction
 
-After the SofM header, we encounter the actual metadata structure. For reference, here's the structure we're reconstructing:
+---
+
+### 🧠 Header Reconstruction
+
+After the SofM header field, we encounter the metadata — a serialized structure that contains a combination of optional user metadata and a set of tensor descriptors. This metadata is stored in a compact format composed of a `BTreeMap<String, String>` and a `Vec<(String, TensorInfo)>` over just encoding, and decoding of `Metadata`.
+
+Notably, the use of `BTreeMap` instead of `HashMap` ensures that the entries maintain a consistent and deterministic order across serialization and deserialization, which is essential for reproducibility and avoids the non-deterministic layout of a standard HashMap. This layout allows us to store a fixed state efficiently and predictably.
+
+For reference, here is the structure we're reconstructing:
 
 ```rust
 pub struct TensorInfo {
-    /// The type of each element of the tensor
-    pub dtype: Dtype,
-    /// The shape of the tensor
-    pub shape: Vec<usize>,
-    /// The offsets to find the data within the byte-buffer array
-    pub data_offsets: (usize, usize),
+    pub dtype: Dtype,                   // Data type of the tensor
+    pub shape: Vec<usize>,             // Tensor dimensions
+    pub data_offsets: (usize, usize),  // Start and end offsets in the buffer
 }
 
 pub struct Metadata {
-    metadata: Option<HashMap<String, String>>,
-    tensors: Vec<TensorInfo>,
-    index_map: HashMap<String, usize>,
+    metadata: Option<HashMap<String, String>>, // Optional user-defined key-value metadata
+    tensors: Vec<TensorInfo>,                  // List of tensor metadata entries
+    index_map: HashMap<String, usize>,         // Maps tensor names to indices in `tensors`
 }
+
 ```
 
-Let's examine the metadata bytes in detail:
+---
+
+### 🔍 Byte-by-Byte Analysis
+
+We'll analyze just the **metadata portion**, excluding the SofMH and tensor buffer:
 
 ```rust
-// This represents only the metadata portion, excluding the SofM header and tensor buffer
-// [0, 1, 9, 2, 1, 4, 0, 16, 1, 4, 116, 101, 115, 116, 0, 32]
-let metadata_bytes = b"\x00\x01\x09\x02\x01\x04\x00\x10\x01\x04\x74\x65\x73\x74\x00\x20";
+let metadata_bytes = b"\x00\x01\x08weight_1\x00\x02\x02\x02\x00\x04       ";
 ```
 
-#### Byte-by-Byte Breakdown
+#### Breakdown:
 
-Let's analyze the metadata byte sequence step-by-step:
+| Byte(s)        | Meaning                                                                 |
+|----------------|-------------------------------------------------------------------------|
+| `\x00`         | Discriminant for `None` (`Option<BTreeMap<...>>`)                       |
+| `\x01`         | Length of the vector of tensor entries (1 tensor)                       |
+| `\x08`         | Length of the key string `"weight_1"`                                   |
+| `weight_1`     | UTF-8 string name of the tensor                                         |
+| `\x00`         | Discriminant for `Dtype::Bool`                                          |
+| `\x02`         | Length of the shape vector (2 dimensions)                               |
+| `\x02\x02`     | Shape dimensions `[2, 2]`                                               |
+| `\x00\x04`     | Data offsets: `(0, 4)`                                                  |
+| `\x20...`      | Padding (spaces `0x20`) to align the metadata to 8-byte boundary        |
 
-1. `\x00` - Discriminant for `Option<HashMap<String, String>>` (the value `None`) if this where Not None then we would follow Discriminant `1` with the **variant payload** `HashMap<String, String>` serialization. 
-2. `\x01` - Length of the `Vec<TensorInfo>` (1 element)
-3. `\x09` - Discriminant for enum `Dtype` (representing `Dtype::I32`)
-4. `\x02` - Length of shape `Vec<usize>` (2 elements)
-5. `\x01\x04` - The shape values `[1, 4]`
-6. `\x00\x10` - The tuple data_offsets `(0, 16)`
-7. `\x01` - Length of `HashMap<String, usize>` (1 key-value pair)
-8. `\x04` - Length of the tensor name `String`
-9. `\x74\x65\x73\x74` - UTF-8 encoding of 'test' (the HashMap key)
-10. `\x00` - Value associated with the key in the HashMap (index 0)
-11. `\x20` - Padding byte to keep the metadata chunk divisible by 8.
+---
 
-This metadata structure contains a single I32 tensor with shape [1, 4], located at byte positions 0-16 in the tensor buffer. The tensor can be accessed using the "test" key in the index map, which points to position 0 in the tensors vector.
+### ✅ Final Decoded Metadata
 
-Result:
-```
+```rust
 Metadata {
     metadata: None,
     tensors: [
         TensorInfo {
-            dtype: I32,
-            shape: [1, 4],
-            data_offsets: (0, 16)
+            dtype: BOOL,
+            shape: [2, 2],
+            data_offsets: (0, 4),
         }
     ],
     index_map: {
-        "test": 0
+        "weight_1": 0,
     }
 }
 ```
 
+---
 
-### Tensor Buffer
+### 📊 Tensor Buffer
 
-The remainder of the file represents the tensor data itself. According to the metadata, our tensor is located at the offset immediately following the padding:
+The remaining bytes in the buffer represent the actual tensor data:
 
+```rust
+b"\x00\x00\x00\x00"
 ```
-\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0
-```
 
-This tensor buffer contains the actual values for the tensor identified as "test" in the index map. Based on the metadata, we know:
+From the metadata, we know:
 
-1. The data type is `I32` (32-bit integer)
-2. The shape is [1, 4], indicating a 1×4 matrix or array
-3. The data occupies positions 0-16 in this buffer
+1. `dtype` is `BOOL` (likely 1 byte per value)
+2. Shape is `[2, 2]` = 4 total elements
+3. Data spans offset `(0, 4)`, so 4 bytes total
 
-In this example, the tensor buffer appears to contain zeroes, which would represent a 1×4 array of 32-bit integers, all initialized to zero. Each 32-bit integer occupies 4 bytes in the buffer, and with 4 elements total (based on the shape [1, 4]), this accounts for the full 16 bytes indicated by the `data_offsets` field (0, 16).
-
-The tensor data can be accessed and interpreted by:
-1. Reading the appropriate number of bytes from the buffer
-2. Converting those bytes to the correct data type (I32 in this case)
-3. Reshaping the resulting values according to the tensor's shape
-
+These 4 bytes appear to be zeroes, representing a 2×2 boolean tensor initialized to `false`.
