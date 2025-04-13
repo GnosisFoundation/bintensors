@@ -27,8 +27,21 @@ One of my favourite proposed attacks against `SafeTensors` and this format invol
 
 ### Attempt 4 
 
+> ⚠️ **Note:** The exploit is no longer applicable in the release version (Rust: `0.1.0`, Python: `0.1.0`) due to significant changes in the file layout compared to the pre-release versions (`0.0.1-alpha.3` / `0.0.5`).
+
 This format vulnerability was unexpected and prompted a thorough review, resulting in [commit](https://github.com/GnosisFoundation/bintensors/commit/032826e369d301b49eb264090581e24198d3a4ed) to properly validate the issue. The root cause lies in tensor_info entries exceeding their index_map counterparts, leading to potential memory allocation mismatches. To mitigate this risk, we introduced a validation check: if the size of tensor_info exceeds that of index_map, the format is immediately deemed invalid.
 
 This issue is specific to BinTensors and can only arise if the file has been manually altered.
 
-An alternative approach would be to project the data into a format that preserves order, similar to how SafeTensors uses Metadata to construct HashMetadata before serialization. However, in our testing, this method resulted in a ~40% degradation in deserialization performance while providing only a ~1% improvement in serialization efficiency. Given these trade-offs, we opted for the validation-based approach.
+### Attempt 5
+
+> ⚠️ **Note:** The exploit is no longer applicable in the release version (Rust: `0.1.0`, Python: `0.1.0`) due to significant changes in the file layout compared to the pre-release versions (`0.0.1-alpha.3` / `0.0.5`).
+
+
+I had a moment of clarity that led to identifying a critical flaw in the metadata encoding of the format. Specifically, I realized that an attacker could craft an oversized `index_map` to maliciously reference the **same tensor buffer repeatedly**, resulting in the deserialization of **tens or even hundreds of megabytes** from a single tensor entry — all without increasing the actual tensor data footprint.  
+
+This vulnerability exposes the system to resource exhaustion attacks and bypasses intended memory boundaries.
+
+### Proposed Mitigation
+
+To resolve this issue, the internal `Metadata` structure was redesigned into a more organized and deterministic format, minimizing the risk of errors. Details of the new format can be found in the [specification](https://github.com/GnosisFoundation/bintensors/blob/master/specs/encoding.md#-header-reconstruction).

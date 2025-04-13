@@ -22,7 +22,7 @@ _DTYPE = {
     "F64": 14,
 }
 
-from typing import Tuple, List
+from typing import Tuple
 
 
 def encode_unsigned_variant_encoding(number: int) -> bytes:
@@ -37,31 +37,23 @@ def encode_unsigned_variant_encoding(number: int) -> bytes:
         return number.to_bytes(1, "little")
 
 
-def encode_tensor_info(dtype: str, shape: Tuple[int, ...], offset: Tuple[int, int]) -> List[bytes]:
-    """Encodes the struct TensorInfo into byte buffer"""
+def encode_header(id: str, dtype: str, shape: Tuple[int, ...], offset: Tuple[int, int]) -> bytes:
+    """Encodes the struct TensorInfo into byte buffer with string ID prefix."""
     if dtype not in _DTYPE:
         raise ValueError(f"Unsupported dtype: {dtype}")
 
-    # flatten out the tensor info
-    layout = chain([_DTYPE[dtype], len(shape)], shape, offset)
-    return b"".join(list(map(encode_unsigned_variant_encoding, layout)))
+    encoded_id = encode_unsigned_variant_encoding(len(id)) + id.encode("utf-8")
 
-
-def encode_hash_map(index_map: Dict[str, int]) -> List[bytes]:
-    """Encodes a dictionary of string keys and integer values."""
-    length = encode_unsigned_variant_encoding(len(index_map))
-
-    hash_map_layout = chain.from_iterable(
-        (
-            encode_unsigned_variant_encoding(len(k)),
-            k.encode("utf-8"),
-            encode_unsigned_variant_encoding(v),
-        )
-        for k, v in index_map.items()
+    # Compose numeric fields
+    numeric_layout = chain(
+        [_DTYPE[dtype], len(shape)],
+        shape,
+        offset
     )
 
-    return b"".join(chain([length], hash_map_layout))
+    encoded_tensor_info = b"".join(encode_unsigned_variant_encoding(x) for x in numeric_layout)
 
+    return encoded_id + encoded_tensor_info
 
 filename = "bintensors_abuse_attempt_3.bt"
 
@@ -74,14 +66,10 @@ def create_payload(size: int):
     length = encode_unsigned_variant_encoding(size)
 
     # Create tensor info buffer
-    tensor_info_buffer = b"".join(encode_tensor_info("F32", shape, (0, tensor_chunk_length)) for _ in range(size))
-    layout_tensor_info = length + tensor_info_buffer
-
-    # Create hash map layout
-    hash_map_layout = encode_hash_map({f"weight_{i}": i for i in range(size)})
+    header = b"".join(encode_header(f"weight_{i}", "F32", shape, (0, tensor_chunk_length)) for i in range(size))
 
     # Construct full layout
-    layout = b"\0" + layout_tensor_info + hash_map_layout
+    layout = b"\x00" + length + header
     layout += b" " * (((8 - len(layout)) % 8) % 8)
     n = len(layout)
     n_header = n.to_bytes(8, "little")
@@ -92,10 +80,13 @@ def create_payload(size: int):
         f.write(layout)
         f.write(b"\0" * tensor_chunk_length)
 
-    print(f"Payload written to {filename}")
+    
+    print(f"[✓] Payload written: {filename}")
 
 
 if __name__ == "__main__":
-    create_payload(5)
-    print(f"The file {filename} is {os.path.getsize(filename) / 10_000_00} Mb")
+    create_payload(100)
+    print(f"[✓] Size: {os.path.getsize(filename) / 1_000_000:.5f} MB")
     load_file(filename)
+
+    

