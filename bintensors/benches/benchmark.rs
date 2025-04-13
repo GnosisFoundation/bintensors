@@ -25,7 +25,7 @@ pub fn bench_serialize(c: &mut Criterion) {
 
     c.bench_function("Serialize 1000_MB", |b| {
         b.iter(|| {
-            let _serialized = serialize(black_box(&metadata), black_box(&None));
+            let _serialized = serialize(black_box(&metadata), black_box(&None)).unwrap();
         })
     });
 }
