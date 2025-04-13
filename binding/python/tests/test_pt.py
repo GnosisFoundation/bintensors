@@ -5,7 +5,7 @@ import tempfile
 import torch
 
 from typing import Dict, Tuple
-from bintensors.torch import load, save, save_file, load_file, safe_open
+from bintensors.torch import load, save, save_file, load_file, safe_open, save_with_checksum
 
 
 def _compare_torch_tensors(lhs: torch.Tensor, rhs: torch.Tensor) -> bool:
@@ -124,3 +124,23 @@ def test_pt_safe_open_access_and_metadata():
             assert model.get_tensor("h.0.ln_1.weight") is not None
             assert model.get_tensor("h.0.ln_1.bias") is not None
             assert model.metadata() is None
+
+
+def test_checksum_two_diffrent_models():
+    model_1 = { "ln.weight" : torch.rand((10,10)), "ln.bias" : torch.rand((10)) }
+    model_2 = { "ln.weight" : torch.rand((10,10)), "ln.bias" : torch.rand((10)) }
+
+    checksum1, _ = save_with_checksum(model_1)
+    checksum2, _ = save_with_checksum(model_2)
+
+    assert checksum1 != checksum2, "These checksum are not equivilent"
+
+
+def test_checksum_two_same_models():
+    model_1 = { "ln.weight" : torch.zeros((2,2)), "ln.bias" : torch.zeros((10)) }
+    model_2 = { "ln.weight" : torch.zeros((2,2)), "ln.bias" : torch.zeros((10)) }
+
+    for _ in range(1000):
+        checksum1, _ = save_with_checksum(model_1)
+        checksum2, _ = save_with_checksum(model_2)
+        assert checksum1 == checksum2, "These checksum are equivilent"

@@ -39,30 +39,23 @@ def encode_unsigned_variant_encoding(number: int) -> bytes:
         return number.to_bytes(1, "little")
 
 
-def encode_tensor_info(dtype: str, shape: Tuple[int, ...], offset: Tuple[int, int]) -> List[bytes]:
-    """Encodes the struct TensorInfo into byte buffer"""
+def encode_header(id: str, dtype: str, shape: Tuple[int, ...], offset: Tuple[int, int]) -> bytes:
+    """Encodes the struct TensorInfo into byte buffer with string ID prefix."""
     if dtype not in _DTYPE:
         raise ValueError(f"Unsupported dtype: {dtype}")
 
-    # flatten out the tensor info
-    layout = chain([_DTYPE[dtype], len(shape)], shape, offset)
-    return b"".join(list(map(encode_unsigned_variant_encoding, layout)))
+    encoded_id = encode_unsigned_variant_encoding(len(id)) + id.encode("utf-8")
 
-
-def encode_hash_map(index_map: Dict[str, int]) -> List[bytes]:
-    """Encodes a dictionary of string keys and integer values."""
-    length = encode_unsigned_variant_encoding(len(index_map))
-
-    hash_map_layout = chain.from_iterable(
-        (
-            encode_unsigned_variant_encoding(len(k)),
-            k.encode("utf-8"),
-            encode_unsigned_variant_encoding(v),
-        )
-        for k, v in index_map.items()
+    # Compose numeric fields
+    numeric_layout = chain(
+        [_DTYPE[dtype], len(shape)],
+        shape,
+        offset
     )
 
-    return b"".join(chain([length], hash_map_layout))
+    encoded_tensor_info = b"".join(encode_unsigned_variant_encoding(x) for x in numeric_layout)
+
+    return encoded_id + encoded_tensor_info
 
 
 def test_empty_file():
@@ -74,7 +67,7 @@ def test_empty_file():
     # header size + metadata + empty tensors
     MAX_FILE_SIZE = 8 + header_size
     assert header_size == 8, "expected packed buffer shoudl be unsinged interger 8."
-    assert buffer[8:] == b"\x00\x00\x00     ", "expected empty metadata fields."
+    assert buffer[8:] == b"\x00\x00      ", "expected empty metadata fields."
     assert MAX_FILE_SIZE == len(buffer), "These should  be equal"
 
 
@@ -87,35 +80,27 @@ def test_man_cmp():
 
     # Create tensor info buffer
     tensor_info_buffer = b"".join(
-        encode_tensor_info(
+        encode_header(
+            f"weight_{i}",
             "F32",
             shape,
             (i * tensor_chunk_length, i * tensor_chunk_length + tensor_chunk_length),
         )
         for i in range(size)
     )
-    layout_tensor_info = length + tensor_info_buffer
-
-    expected = []
-    for (start, end, step) in [(0, size, 1), (size - 1, -1, -1)]:
-        # Create hash map layout
-        hash_map_layout = encode_hash_map({f"weight_{i}": i for i in range(start, end, step)})
-
-        # Construct full layout
-        layout = b"\0" + layout_tensor_info + hash_map_layout
-        layout += b" " * (((8 - len(layout)) % 8) % 8)
-        n = len(layout)
-        n_header = n.to_bytes(8, "little")
-
-        # layout together
-        buffer = n_header + layout + b"\0" * (tensor_chunk_length * 2)
-        expected.append(buffer)
+    layout = length + tensor_info_buffer
+    layout = b"\0" + layout
+    layout += b" " * (((8 - len(layout)) % 8) % 8)
+    n = len(layout)
+    n_header = n.to_bytes(8, "little")
+    
+    expected = n_header + layout + (b"\0" * tensor_chunk_length * size)
 
     tensor_dict = {"weight_0": torch.zeros(shape), "weight_1": torch.zeros(shape)}
 
     buffer = save(tensor_dict)
     # we need to check both since there is no order in the hashmap
-    assert buffer in expected, f"got {buffer}, and expected {expected}"
+    assert buffer == expected, f"got {buffer}, and expected {expected}"
 
 
 def test_missmatch_length_of_metadata_large():
@@ -127,28 +112,22 @@ def test_missmatch_length_of_metadata_large():
 
     # Create tensor info buffer
     tensor_info_buffer = b"".join(
-        encode_tensor_info(
+        encode_header(
+            f"weight_{i}",
             "F32",
             shape,
             (i * tensor_chunk_length, i * tensor_chunk_length + tensor_chunk_length),
         )
         for i in range(size)
     )
-    layout_tensor_info = length + tensor_info_buffer
-
-    expected = [0] * 2
-
-    # Create hash map layout
-    hash_map_layout = encode_hash_map({f"weight_{i}": i for i in range(0, 2, 1)})
-
-    # Construct full layout
-    layout = b"\0" + layout_tensor_info + hash_map_layout
+    layout = length + tensor_info_buffer
+    layout = b"\0" + layout
     layout += b" " * (((8 - len(layout)) % 8) % 8)
     n = len(layout)
     n_header = n.to_bytes(8, "little")
-
+    
     # layout together
-    buffer = n_header + layout + b"\0" * (tensor_chunk_length * 2)
+    buffer = n_header + layout + b"\0" * (tensor_chunk_length * size)
 
     with pytest.raises(BintensorError):
         # this is not a valid since the metadata
@@ -165,70 +144,25 @@ def test_missmatch_length_of_metadata_small():
 
     # Create tensor info buffer
     tensor_info_buffer = b"".join(
-        encode_tensor_info(
+        encode_header(
+            f"weight_{i}",
             "F32",
             shape,
             (i * tensor_chunk_length, i * tensor_chunk_length + tensor_chunk_length),
         )
         for i in range(size)
     )
-    layout_tensor_info = length + tensor_info_buffer
-
-    # Create hash map layout
-    hash_map_layout = encode_hash_map({f"weight_{i}": i for i in range(0, 2, 1)})
-
-    # Construct full layout
-    layout = b"\0" + layout_tensor_info + hash_map_layout
+    layout = length + tensor_info_buffer
+    layout = b"\0" + layout
     layout += b" " * (((8 - len(layout)) % 8) % 8)
     n = len(layout)
     n_header = n.to_bytes(8, "little")
 
     # layout together
-    buffer = n_header + layout + b"\0" * (tensor_chunk_length * 2)
+    buffer = n_header + layout + b"\0" * (tensor_chunk_length * size)
 
     with pytest.raises(BintensorError):
         # this is not a valid since the metadata
         # size doe not match as it too big
         _ = load(buffer)
 
-
-def test_missmatch_length_of_metadata():
-    size = 2
-    shape = (2, 2)
-    tensor_chunk_length = shape[0] * shape[1] * 4  # Size of a tensor buffer
-
-    # convert usize or unsigned long long into variant encoding
-    length = encode_unsigned_variant_encoding(size * 1000)
-
-    # Create tensor info byte buffer
-    tensor_info_buffer = b"".join(
-        encode_tensor_info(
-            "F32",
-            shape,
-            (i * tensor_chunk_length, i * tensor_chunk_length + tensor_chunk_length),
-        )
-        for i in range(size)
-    )
-    layout_tensor_info = length + tensor_info_buffer
-
-    # Create hash map layout
-    hash_map_layout = encode_hash_map({f"weight_{i}": i for i in range(0, 2, 1)})
-
-    # Construct full layout
-    # metadata empty + tensor_info + hash_map_index_map
-    layout = b"\0" + layout_tensor_info + hash_map_layout
-
-    # empty padding
-    layout += b" " * (((8 - len(layout)) % 8) % 8)
-    n = len(layout)
-
-    # size of full header (metadata + tensors info + index map)
-    n_header = n.to_bytes(8, "little")
-
-    # layout together into buffer
-    buffer = n_header + layout + b"\0" * (tensor_chunk_length * 2)
-
-    with pytest.raises(BintensorError):
-        # this is not a valid since the metadata
-        # size doe not match as it too big
-        _ = load(buffer)
