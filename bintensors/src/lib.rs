@@ -29,6 +29,7 @@ mod lib {
     #[cfg(not(feature = "std"))]
     mod no_stds {
         pub use alloc::borrow::Cow;
+        pub use alloc::collections::BTreeMap;
         pub use alloc::string::{String, ToString};
         pub use alloc::vec::Vec;
         pub use hashbrown::HashMap;
@@ -37,7 +38,7 @@ mod lib {
     #[cfg(feature = "std")]
     mod stds {
         pub use std::borrow::Cow;
-        pub use std::collections::HashMap;
+        pub use std::collections::{BTreeMap, HashMap};
         pub use std::string::{String, ToString};
         pub use std::vec::Vec;
     }

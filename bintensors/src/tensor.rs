@@ -1,10 +1,13 @@
 //! Module Containing the most important structures
-use crate::lib::{Cow, HashMap, String, ToString, Vec};
+use crate::lib::{BTreeMap, Cow, HashMap, String, ToString, Vec};
 use crate::slice::{InvalidSlice, SliceIterator, TensorIndexer};
 use bincode::{Decode, Encode};
 use digest::Digest;
+
 #[cfg(feature = "std")]
 use std::io::Write;
+#[cfg(feature = "std")]
+use std::path::Path;
 
 const MIN_HEADER_SIZE: usize = 8;
 const MAX_HEADER_SIZE: usize = 100_000_000;
@@ -14,9 +17,6 @@ const OFFSET: usize = 8;
 /// A Bintensor file.
 #[derive(Debug)]
 pub enum BinTensorError {
-    // TODO: possible uncomment when adding a magic number or version
-    // /// The magic nubmer of the file
-    // InvalidMagicNumber,
     /// The header is an invalid UTF-8 string and cannot be read.
     InvalidHeader,
     /// The header's first byte is not the expected `{`.
@@ -233,64 +233,6 @@ fn prepare<S: AsRef<str> + Ord + core::fmt::Display, V: View, I: IntoIterator<It
     ))
 }
 
-fn prepare_with_checksum<
-    S: AsRef<str> + Ord + core::fmt::Display,
-    V: View,
-    I: IntoIterator<Item = (S, V)>,
-    H: Digest,
->(
-    data: I,
-    data_info: &Option<HashMap<String, String>>,
-    mut hasher: H,
-) -> Result<(PreparedData, Vec<V>, Vec<u8>), BinTensorError> {
-    // Make sure we're sorting by descending dtype alignment
-    // Then by name
-    let mut data: Vec<_> = data.into_iter().collect();
-    data.sort_by(|(lname, left), (rname, right)| {
-        right.dtype().cmp(&left.dtype()).then(lname.cmp(rname))
-    });
-
-    let mut tensors: Vec<V> = Vec::with_capacity(data.len());
-    let mut hmetadata = Vec::with_capacity(data.len());
-    let mut offset = 0;
-    let data: Vec<_> = data.into_iter().collect();
-    for (name, tensor) in data {
-        let n = tensor.data_len();
-        let tensor_info = TensorInfo {
-            dtype: tensor.dtype(),
-            shape: tensor.shape().to_vec(),
-            data_offsets: (offset, offset + n),
-        };
-        offset += n;
-        hmetadata.push((name.to_string(), tensor_info));
-        // infer digest order
-        hasher.update(tensor.data().as_ref());
-        tensors.push(tensor);
-    }
-
-    // encode the metadata into byte buffer
-    let metadata: Metadata = Metadata::new(data_info.clone(), hmetadata)?;
-    let mut metadata_buf = bincode::encode_to_vec(
-        metadata,
-        bincode::config::standard().with_limit::<MAX_HEADER_SIZE>(),
-    )?;
-    // Force alignment to 8 bytes with padding.
-    let extra = (8 - metadata_buf.len() % 8) % 8;
-    let padding = vec![b' '; extra];
-    metadata_buf.extend(padding);
-
-    let n: u64 = metadata_buf.len() as u64;
-    Ok((
-        PreparedData {
-            n,
-            header_bytes: metadata_buf,
-            offset,
-        },
-        tensors,
-        hasher.finalize()[..].to_vec(),
-    ))
-}
-
 /// Serialize to an owned byte buffer the dictionnary of tensors.
 pub fn serialize<
     S: AsRef<str> + Ord + core::fmt::Display,
@@ -326,10 +268,11 @@ pub fn serialize_to_file<
     S: AsRef<str> + Ord + core::fmt::Display,
     V: View,
     I: IntoIterator<Item = (S, V)>,
+    P: AsRef<Path>,
 >(
     data: I,
     data_info: &Option<HashMap<String, String>>,
-    filename: &std::path::Path,
+    filename: P,
 ) -> Result<(), BinTensorError> {
     let (
         PreparedData {
@@ -347,8 +290,30 @@ pub fn serialize_to_file<
     Ok(())
 }
 
+/// A structure that holds a serialized byte buffer along with its checksum.
+///
+/// This is typically used to serialize data (e.g., tensors) and produce a digest
+/// to ensure integrity when the buffer is transmitted or stored. The `checksum`
+/// is computed from the contents of `buffer`, using a specified hashing algorithm.
+///
+/// Fields:
+/// - `checksum`: A digest (e.g., SHA-1, SHA-256) of the serialized buffer.
+/// - `buffer`: The actual serialized data.
+pub struct DigestBuffer {
+    /// A digest (e.g., SHA-1, SHA-256) of the serialized buffer.
+    pub checksum: Vec<u8>,
+    /// serialized data.
+    pub buffer: Vec<u8>,
+}
+
 /// Serialize to an owned byte buffer the dictionnary of tensors,
 /// with a checksum idendity
+///
+/// ```
+/// use sha1::Sha1;
+///
+///
+/// ```
 pub fn serialize_with_checksum<
     S: AsRef<str> + Ord + core::fmt::Display,
     V: View,
@@ -357,8 +322,8 @@ pub fn serialize_with_checksum<
 >(
     data: I,
     data_info: &Option<HashMap<String, String>>,
-    hasher: H,
-) -> Result<(Vec<u8>, Vec<u8>), BinTensorError> {
+    mut hasher: H,
+) -> Result<DigestBuffer, BinTensorError> {
     let (
         PreparedData {
             n,
@@ -366,8 +331,7 @@ pub fn serialize_with_checksum<
             offset,
         },
         tensors,
-        checksum,
-    ) = prepare_with_checksum(data, data_info, hasher)?;
+    ) = prepare(data, data_info)?;
     let expected_size = OFFSET + header_bytes.len() + offset;
     let mut buffer: Vec<u8> = Vec::with_capacity(expected_size);
 
@@ -379,7 +343,11 @@ pub fn serialize_with_checksum<
         buffer.extend(data.as_ref());
     }
 
-    Ok((checksum, buffer))
+    hasher.update(&buffer);
+    Ok(DigestBuffer {
+        checksum: hasher.finalize()[..].to_vec(),
+        buffer,
+    })
 }
 
 /// A structure owning some metadata to lookup tensors on a shared `data`
@@ -440,22 +408,22 @@ impl<'data> BinTensors<'data> {
     /// Given a byte-buffer representing the whole bintensor file
     /// parses it and returns the Deserialized form (No Tensor allocation).
     ///
-    /// ```ignore
+    /// ```
     /// use bintensors::BinTensors;
     /// use memmap2::MmapOptions;
     /// use std::fs::File;
     ///
-    /// let filename = "model.bintensors";
+    /// let filename = "model.bt";
     /// use std::io::Write;
-    /// let serialized = b"\x10\x00\x00\x00\x00\x00\x00\x00\x00\x01\x09\x02\x01\x04\x00\x10\x01\x04\x74\x65\x73\x74\x00\x20\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+    /// let serialized = b"\x18\x00\x00\x00\x00\x00\x00\x00\x00\x01\x08weight_1\x00\x02\x02\x02\x00\x04       \x00\x00\x00\x00";
     /// File::create(filename).unwrap().write(serialized).unwrap();
     /// let file = File::open(filename).unwrap();
     /// let buffer = unsafe { MmapOptions::new().map(&file).unwrap() };
     /// let tensors = BinTensors::deserialize(&buffer).unwrap();
     /// let tensor = tensors
-    ///         .tensor("test");
+    ///         .tensor("weight_1");
     /// // clean up files
-    /// let _ = std::fs::remove_file(filename).unwrap();
+    ///
     ///
     /// ```
     pub fn deserialize<'in_data>(buffer: &'in_data [u8]) -> Result<Self, BinTensorError>
@@ -542,14 +510,79 @@ impl<'data> BinTensors<'data> {
 
 /// The stuct representing the header of bintensor files which allow
 /// indexing into the raw byte-buffer array and how to interpret it.
-#[derive(Debug, Encode, Decode)]
+#[derive(Debug)]
 #[cfg_attr(feature = "std", derive(Clone))]
 pub struct Metadata {
-    #[cfg_attr(not(feature = "std"), bincode(with_serde))]
     metadata: Option<HashMap<String, String>>,
     tensors: Vec<TensorInfo>,
-    #[cfg_attr(not(feature = "std"), bincode(with_serde))]
     index_map: HashMap<String, usize>,
+}
+
+impl Encode for Metadata {
+    fn encode<E: bincode::enc::Encoder>(
+        &self,
+        encoder: &mut E,
+    ) -> Result<(), bincode::error::EncodeError> {
+        // Handle HashMap fields with special attributes
+        let metadata: Option<BTreeMap<&String, &String>> = self.metadata.as_ref().map(|map| {
+            let mut entries: Vec<_> = map.iter().collect();
+            entries.sort_by_key(|(k, _)| *k);
+            entries.into_iter().collect::<BTreeMap<_, _>>()
+        });
+        #[cfg(feature = "std")]
+        bincode::Encode::encode(&metadata, encoder)?;
+        #[cfg(not(feature = "std"))]
+        bincode::serde::encode_into_writer(
+            &metadata,
+            encoder.writer(),
+            bincode::config::standard(),
+        )?;
+
+        let mut buffer = Vec::with_capacity(self.tensors.len());
+
+        for _ in 0..self.tensors.len() {
+            buffer.push(None);
+        }
+
+        for (key, &index) in &self.index_map {
+            buffer[index] = Some((key, &self.tensors[index]));
+        }
+
+        let header: Vec<(&String, &TensorInfo)> =
+            buffer.into_iter().map(|item| item.unwrap()).collect();
+
+        bincode::Encode::encode(&header, encoder)
+    }
+}
+
+impl<Context> Decode<Context> for Metadata {
+    fn decode<D: bincode::de::Decoder<Context = Context>>(
+        decoder: &mut D,
+    ) -> Result<Self, bincode::error::DecodeError> {
+        #[cfg(feature = "std")]
+        let metadata = bincode::Decode::decode(decoder)?;
+        #[cfg(not(feature = "std"))]
+        let metadata =
+            bincode::serde::decode_from_reader(decoder.reader(), bincode::config::standard())?;
+
+        let buffer: Vec<(String, TensorInfo)> = bincode::Decode::decode(decoder)?;
+
+        // Reconstruct tensors vector directly from buffer
+        // This ensures tensors are in the exact order they were encoded
+        let mut tensors = Vec::with_capacity(buffer.len());
+        let mut index_map = HashMap::with_capacity(buffer.len());
+
+        for (i, (key, tensor_info)) in buffer.into_iter().enumerate() {
+            tensors.push(tensor_info);
+            index_map.insert(key, i);
+        }
+
+        Ok(Metadata {
+            metadata,
+            tensors,
+            index_map,
+        })
+    }
 }
 
 impl Metadata {
@@ -932,9 +965,8 @@ mod tests {
         assert_eq!(
             out,
             [
-                24, 0, 0, 0, 0, 0, 0, 0, 0, 1, 11, 3, 1, 2, 3, 0, 24, 1, 6, 97, 116, 116, 110, 46,
-                48, 0, 32, 32, 32, 32, 32, 32, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64,
-                64, 0, 0, 128, 64, 0, 0, 160, 64
+                16, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6, 97, 116, 116, 110, 46, 48, 11, 3, 1, 2, 3, 0, 24,
+                0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64
             ]
         );
         let _ = BinTensors::deserialize(&out).unwrap();
@@ -944,7 +976,7 @@ mod tests {
     fn test_empty() {
         let tensors: HashMap<String, TensorView> = HashMap::new();
         let out = serialize(&tensors, &None).unwrap();
-        assert_eq!(out, [8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 32, 32, 32, 32]);
+        assert_eq!(out, [8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 32, 32, 32, 32, 32]);
         let _ = BinTensors::deserialize(&out).unwrap();
     }
 
@@ -964,9 +996,8 @@ mod tests {
         assert_eq!(
             out,
             [
-                24, 0, 0, 0, 0, 0, 0, 0, 0, 1, 11, 4, 1, 1, 2, 3, 0, 24, 1, 5, 97, 116, 116, 110,
-                48, 0, 32, 32, 32, 32, 32, 32, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64,
-                64, 0, 0, 128, 64, 0, 0, 160, 64
+                16, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5, 97, 116, 116, 110, 48, 11, 4, 1, 1, 2, 3, 0, 24,
+                0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 64, 0, 0, 64, 64, 0, 0, 128, 64, 0, 0, 160, 64
             ],
         );
         let parsed = BinTensors::deserialize(&out).unwrap();
@@ -1093,27 +1124,27 @@ mod tests {
 
     #[test]
     fn test_deserialization() {
-        let serialized = b"\x10\x00\x00\x00\x00\x00\x00\x00\x00\x01\x09\x02\x01\x04\x00\x10\x01\x04\x74\x65\x73\x74\x00\x20\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+        let serialized = b"\x10\x00\x00\x00\x00\x00\x00\x00\x00\x01\x04test\x00\x02\x02\x02\x00\x04   \x00\x00\x00\x00";
         let loaded = BinTensors::deserialize(serialized).unwrap();
         assert_eq!(loaded.names(), vec!["test"]);
         let tensor = loaded.tensor("test").unwrap();
         assert!(!tensor.shape().is_empty());
-        assert_eq!(tensor.dtype(), Dtype::I32);
-        // 16 bytes
-        assert_eq!(tensor.data(), b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
+        assert_eq!(tensor.dtype(), Dtype::BOOL);
+        // 4 bytes
+        assert_eq!(tensor.data(), b"\0\0\0\0");
     }
 
     #[test]
     fn test_lifetimes() {
-        let serialized = b"\x10\x00\x00\x00\x00\x00\x00\x00\x00\x01\x09\x02\x01\x04\x00\x10\x01\x04\x74\x65\x73\x74\x00\x20\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+        let serialized = b"\x10\x00\x00\x00\x00\x00\x00\x00\x00\x01\x04test\x00\x02\x02\x02\x00\x04   \x00\x00\x00\x00";
 
         let decoded = BinTensors::deserialize(serialized).unwrap();
         let tensor = decoded.tensor("test").unwrap();
 
-        assert_eq!(tensor.shape(), vec![1, 4]);
-        assert_eq!(tensor.dtype(), Dtype::I32);
-        // 16 bytes
-        assert_eq!(tensor.data(), b"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
+        assert_eq!(tensor.shape(), vec![2, 2]);
+        assert_eq!(tensor.dtype(), Dtype::BOOL);
+        // 4 bytes
+        assert_eq!(tensor.data(), b"\0\0\0\0");
     }
 
     #[cfg(feature = "std")]
@@ -1140,7 +1171,6 @@ mod tests {
             index_map,
         };
 
-        println!("{metadata:?}");
         let serialized = bincode::encode_to_vec(metadata, bincode::config::standard()).unwrap();
         let n = serialized.len();
 
@@ -1260,10 +1290,11 @@ mod tests {
             offset += n;
         }
 
-        let hasher = Sha1::new();
-        let (_, _, checksum) = prepare_with_checksum(metadata, &None, hasher).unwrap();
+        let mut hasher = Sha1::new();
+        let b = serialize(metadata, &None).unwrap();
+        hasher.update(&b);
 
-        checksum
+        hasher.finalize()[..].to_vec()
     }
 
     #[cfg(not(debug_assertions))]
@@ -1319,12 +1350,13 @@ mod tests {
         }
 
         let hasher = Sha1::new();
-        let (checksum, _) = serialize_with_checksum(metadata, &None, hasher).unwrap();
+        let DigestBuffer { checksum, .. } =
+            serialize_with_checksum(metadata, &None, hasher).unwrap();
         assert_eq!(
             checksum,
             &[
-                100, 209, 191, 141, 61, 68, 83, 240, 188, 254, 167, 160, 6, 70, 194, 26, 148, 240,
-                34, 71
+                47, 102, 227, 29, 151, 101, 28, 132, 166, 233, 33, 96, 254, 247, 131, 82, 69, 129,
+                67, 237
             ]
         )
     }
@@ -1376,12 +1408,13 @@ mod tests {
         }
 
         let hasher = Sha256::new();
-        let (checksum, _) = serialize_with_checksum(metadata, &None, hasher).unwrap();
+        let DigestBuffer { checksum, .. } =
+            serialize_with_checksum(metadata, &None, hasher).unwrap();
         assert_eq!(
             checksum,
             &[
-                179, 200, 201, 49, 100, 134, 128, 54, 93, 147, 155, 192, 81, 93, 102, 173, 13, 250,
-                150, 91, 244, 4, 231, 213, 212, 127, 76, 75, 25, 210, 126, 103
+                123, 75, 249, 49, 72, 79, 229, 209, 172, 40, 79, 47, 31, 205, 108, 5, 149, 67, 105,
+                217, 99, 137, 162, 119, 235, 118, 113, 44, 69, 26, 163, 211
             ]
         )
     }
@@ -1433,12 +1466,13 @@ mod tests {
         }
 
         let hasher = Sha3_256::new();
-        let (checksum, _) = serialize_with_checksum(metadata, &None, hasher).unwrap();
+        let DigestBuffer { checksum, .. } =
+            serialize_with_checksum(metadata, &None, hasher).unwrap();
         assert_eq!(
             checksum,
             &[
-                71, 156, 143, 96, 233, 131, 60, 31, 172, 241, 198, 96, 76, 210, 14, 244, 127, 125,
-                96, 218, 40, 88, 75, 108, 176, 151, 136, 203, 23, 123, 221, 33
+                49, 8, 133, 128, 137, 157, 0, 20, 99, 208, 176, 9, 60, 147, 117, 232, 12, 239, 55,
+                90, 103, 195, 21, 235, 62, 6, 242, 39, 129, 122, 89, 21
             ]
         )
     }
