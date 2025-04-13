@@ -90,7 +90,7 @@ def save_file(
 def save_with_checksum(
     tensor_dict: Dict[str, np.ndarray],
     metadata: Optional[Dict[str, str]] = None,
-    hasher: Callable[[bytes], HASH] = hashlib.sha224,
+    hasher: Callable[[bytes], HASH] = hashlib.sha1,
 ) -> Tuple[bytes, bytes]:
     """
     Saves a dictionary of tensors into raw bytes in bintensors format.
