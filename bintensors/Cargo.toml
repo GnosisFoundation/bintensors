@@ -1,12 +1,12 @@
 [package]
 name = "bintensors"
-version = "0.0.1-dev"
+version = "0.1.0"
 edition = "2024"
 license = "MIT"
 rust-version = "1.85"
 authors = ["Luca Vivona"]
 readme = "README.md"
-keywords = ["bintensors", "Tensors", "Pytorch", "Numpy", "bincode"]
+keywords = ["bintensors", "serde", "tensors", "hugginface", "pytorch"]
 repository = "https://github.com/GnosisFoundation/bintensors"
 description = """
 bintensors is a high-performance binary tensor serialization 
