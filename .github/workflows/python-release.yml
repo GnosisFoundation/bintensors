@@ -10,7 +10,7 @@ name: Python PyPi Release
 on:
   push:
     tags:
-      - py-v*
+      - v*
 
 permissions:
   contents: read
