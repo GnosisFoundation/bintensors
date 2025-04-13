@@ -72,20 +72,21 @@ with safe_open("model.bt", framework="pt", device="cpu") as f:
 
 Lets assume we want to handle file in rust
 
-```rust ignore
-use std::fs::File;
-use memmap2::MmapOptions;
+```rust
 use bintensors::BinTensors;
+use memmap2::MmapOptions;
+use std::fs::File;
 
 let filename = "model.bt";
+use std::io::Write;
+let serialized = b"\x18\x00\x00\x00\x00\x00\x00\x00\x00\x01\x08weight_1\x00\x02\x02\x02\x00\x04       \x00\x00\x00\x00";
+File::create(&filename).unwrap().write(serialized).unwrap();
 let file = File::open(filename).unwrap();
-
-// Creates a read-only memory map backed by a file.
 let buffer = unsafe { MmapOptions::new().map(&file).unwrap() };
-// deserialize bytes
 let tensors = BinTensors::deserialize(&buffer).unwrap();
 let tensor = tensors
-        .tensor("weight1");
+        .tensor("weight_1");
+std::fs::remove_file(filename).unwrap()
 ```
 
 ## Overview
