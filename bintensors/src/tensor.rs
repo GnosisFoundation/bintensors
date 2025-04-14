@@ -562,8 +562,10 @@ impl<Context> Decode<Context> for Metadata {
         #[cfg(feature = "std")]
         let metadata = bincode::Decode::decode(decoder)?;
         #[cfg(not(feature = "std"))]
-        let metadata =
-            bincode::serde::decode_from_reader(decoder.reader(), bincode::config::standard())?;
+        let metadata = bincode::serde::decode_from_reader(
+            decoder.reader(),
+            bincode::config::standard().with_limit::<{ MAX_HEADER_SIZE }>(),
+        )?;
 
         let buffer: Vec<(String, TensorInfo)> = bincode::Decode::decode(decoder)?;
 
@@ -1475,5 +1477,21 @@ mod tests {
                 90, 103, 195, 21, 235, 62, 6, 242, 39, 129, 122, 89, 21
             ]
         )
+    }
+
+    #[test]
+    fn test_out() {
+        let buffer: [u8; 24] = [
+            16, 0, 0, 0, 0, 0, 0, 0, 1, 43, 253, 0, 255, 255, 255, 255, 255, 255, 255, 4, 45, 168,
+            0, 245,
+        ];
+
+        let arr: [u8; 8] = [
+            buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7],
+        ];
+
+        let size = usize::from_le_bytes(arr);
+        assert!(size < usize::MAX);
+        // let tensors = BinTensors::deserialize(&buffer).unwrap();
     }
 }
