@@ -26,6 +26,7 @@ clean:
 	find . -type f -name "*.pyc" -delete
 
 test:
+	maturin develop
 	$(PYTEST) -sv tests/
 
 lint: 
