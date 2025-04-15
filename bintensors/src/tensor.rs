@@ -523,26 +523,7 @@ impl Encode for Metadata {
         &self,
         encoder: &mut E,
     ) -> Result<(), bincode::error::EncodeError> {
-        // Handle HashMap fields with special attributes
-        let metadata: Option<BTreeMap<&String, &String>> = self.metadata.as_ref().map(|map| {
-            let mut entries: Vec<_> = map.iter().collect();
-            entries.sort_by_key(|(k, _)| *k);
-            entries.into_iter().collect::<BTreeMap<_, _>>()
-        });
-        #[cfg(feature = "std")]
-        bincode::Encode::encode(&metadata, encoder)?;
-        #[cfg(not(feature = "std"))]
-        bincode::serde::encode_into_writer(
-            &metadata,
-            encoder.writer(),
-            bincode::config::standard(),
-        )?;
-
-        let mut buffer = Vec::with_capacity(self.tensors.len());
-
-        for _ in 0..self.tensors.len() {
-            buffer.push(None);
-        }
+        let mut buffer = vec![None; self.tensors.len()];
 
         for (key, &index) in &self.index_map {
             buffer[index] = Some((key, &self.tensors[index]));
@@ -551,7 +532,13 @@ impl Encode for Metadata {
         let header: Vec<(&String, &TensorInfo)> =
             buffer.into_iter().map(|item| item.unwrap()).collect();
 
-        bincode::Encode::encode(&header, encoder)
+        let metadata: Option<BTreeMap<&String, &String>> = self.metadata.as_ref().map(|map| {
+            let mut entries: Vec<_> = map.iter().collect();
+            entries.sort_by_key(|(k, _)| *k);
+            entries.into_iter().collect::<BTreeMap<_, _>>()
+        });
+
+        bincode::Encode::encode(&(metadata, header), encoder)
     }
 }
 
@@ -562,9 +549,9 @@ impl<Context> Decode<Context> for Metadata {
         #[cfg(feature = "std")]
         let metadata = bincode::Decode::decode(decoder)?;
         #[cfg(not(feature = "std"))]
-        let metadata = bincode::serde::decode_from_reader(
+        let metadata: Option<HashMap<String, String>> = bincode::serde::decode_from_reader(
             decoder.reader(),
-            bincode::config::standard().with_limit::<{ MAX_HEADER_SIZE }>(),
+            bincode::config::standard().with_limit::<{ MAX_HEADER_SIZE / 2 }>(),
         )?;
 
         let buffer: Vec<(String, TensorInfo)> = bincode::Decode::decode(decoder)?;
