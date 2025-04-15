@@ -141,8 +141,8 @@ def test_safe_open_access_with_metadata():
 
 
 def test_checksum_two_diffrent_models():
-    model_1 = { "ln.weight" : np.random.random((10,10)), "ln.bias" : np.random.random((10)) }
-    model_2 = { "ln.weight" : np.random.random((10,10)), "ln.bias" : np.random.random((10)) }
+    model_1 = {"ln.weight": np.random.random((10, 10)), "ln.bias": np.random.random((10))}
+    model_2 = {"ln.weight": np.random.random((10, 10)), "ln.bias": np.random.random((10))}
 
     checksum1, _ = save_with_checksum(model_1)
     checksum2, _ = save_with_checksum(model_2)
@@ -151,8 +151,8 @@ def test_checksum_two_diffrent_models():
 
 
 def test_checksum_two_same_models():
-    model_1 = { "ln.weight" : np.zeros((2,2)), "ln.bias" : np.zeros((10)) }
-    model_2 = { "ln.weight" : np.zeros((2,2)), "ln.bias" : np.zeros((10)) }
+    model_1 = {"ln.weight": np.zeros((2, 2)), "ln.bias": np.zeros((10))}
+    model_2 = {"ln.weight": np.zeros((2, 2)), "ln.bias": np.zeros((10))}
 
     for _ in range(1000):
         checksum1, _ = save_with_checksum(model_1)
@@ -163,11 +163,14 @@ def test_checksum_two_same_models():
 def test_checksum_two_same_models_with_diffrent_framework():
     import torch
     from bintensors.torch import save_with_checksum as save_with_checksum_pt
-    model_1 = { "ln.weight" : np.zeros((2,2), dtype=np.float32), "ln.bias" : np.zeros((10), dtype=np.float32) }
-    model_2 = { "ln.weight" : torch.zeros((2,2), dtype=torch.float32), "ln.bias" : torch.zeros((10), dtype=torch.float32) }
+
+    model_1 = {"ln.weight": np.zeros((2, 2), dtype=np.float32), "ln.bias": np.zeros((10), dtype=np.float32)}
+    model_2 = {
+        "ln.weight": torch.zeros((2, 2), dtype=torch.float32),
+        "ln.bias": torch.zeros((10), dtype=torch.float32),
+    }
 
     for _ in range(1000):
         checksum1, _ = save_with_checksum(model_1)
         checksum2, _ = save_with_checksum_pt(model_2)
         assert checksum1 == checksum2, "These checksum are equivilent"
-

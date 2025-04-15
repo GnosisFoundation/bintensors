@@ -127,8 +127,8 @@ def test_pt_safe_open_access_and_metadata():
 
 
 def test_checksum_two_diffrent_models():
-    model_1 = { "ln.weight" : torch.rand((10,10)), "ln.bias" : torch.rand((10)) }
-    model_2 = { "ln.weight" : torch.rand((10,10)), "ln.bias" : torch.rand((10)) }
+    model_1 = {"ln.weight": torch.rand((10, 10)), "ln.bias": torch.rand((10))}
+    model_2 = {"ln.weight": torch.rand((10, 10)), "ln.bias": torch.rand((10))}
 
     checksum1, _ = save_with_checksum(model_1)
     checksum2, _ = save_with_checksum(model_2)
@@ -137,8 +137,8 @@ def test_checksum_two_diffrent_models():
 
 
 def test_checksum_two_same_models():
-    model_1 = { "ln.weight" : torch.zeros((2,2)), "ln.bias" : torch.zeros((10)) }
-    model_2 = { "ln.weight" : torch.zeros((2,2)), "ln.bias" : torch.zeros((10)) }
+    model_1 = {"ln.weight": torch.zeros((2, 2)), "ln.bias": torch.zeros((10))}
+    model_2 = {"ln.weight": torch.zeros((2, 2)), "ln.bias": torch.zeros((10))}
 
     for _ in range(1000):
         checksum1, _ = save_with_checksum(model_1)

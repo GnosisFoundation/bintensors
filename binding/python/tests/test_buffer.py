@@ -47,11 +47,7 @@ def encode_header(id: str, dtype: str, shape: Tuple[int, ...], offset: Tuple[int
     encoded_id = encode_unsigned_variant_encoding(len(id)) + id.encode("utf-8")
 
     # Compose numeric fields
-    numeric_layout = chain(
-        [_DTYPE[dtype], len(shape)],
-        shape,
-        offset
-    )
+    numeric_layout = chain([_DTYPE[dtype], len(shape)], shape, offset)
 
     encoded_tensor_info = b"".join(encode_unsigned_variant_encoding(x) for x in numeric_layout)
 
@@ -93,7 +89,7 @@ def test_man_cmp():
     layout += b" " * (((8 - len(layout)) % 8) % 8)
     n = len(layout)
     n_header = n.to_bytes(8, "little")
-    
+
     expected = n_header + layout + (b"\0" * tensor_chunk_length * size)
 
     tensor_dict = {"weight_0": torch.zeros(shape), "weight_1": torch.zeros(shape)}
@@ -125,7 +121,7 @@ def test_missmatch_length_of_metadata_large():
     layout += b" " * (((8 - len(layout)) % 8) % 8)
     n = len(layout)
     n_header = n.to_bytes(8, "little")
-    
+
     # layout together
     buffer = n_header + layout + b"\0" * (tensor_chunk_length * size)
 
@@ -165,4 +161,3 @@ def test_missmatch_length_of_metadata_small():
         # this is not a valid since the metadata
         # size doe not match as it too big
         _ = load(buffer)
-
