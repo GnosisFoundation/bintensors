@@ -110,7 +110,7 @@ Although the decision by the Hugging Face `safetensors` development team to util
   </picture>
 </p>
 
-Incorporating the `bincode` library led to a significant performance boost in deserialization, nearly tripling its speed—an improvement that was somewhat expected. Benchmarking code can be found in `bincode/bench/benchmark.rs`, where we conducted two separate tests per repository, comparing the serialization performance of model tests in safesensors and bintensors within the Rust-only implementation. The results, as shown in the figure above, highlight the substantial gains achieved.
+Incorporating the `bincode` library led to a significant performance boost in deserialization, nearly tripling its speed—an improvement that was somewhat expected. Benchmarking code can be found in `bintensors/bench/benchmark.rs`, where we conducted two separate tests per repository, comparing the serialization performance of model tests in safesensors and bintensors within the Rust-only implementation. The results, as shown in the figure above, highlight the substantial gains achieved.
 
 To better understand the factors behind this improvement, we analyzed the call stack, comparing the performance characteristics of `serde_json` and `bincode`. To facilitate this, we generated a flame graph to visualize execution paths and identify potential bottlenecks in the `serde_json` deserializer. The findings are illustrated in the figures below.
 
