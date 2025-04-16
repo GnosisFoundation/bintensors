@@ -1,5 +1,6 @@
 //! Module Containing the most important structures
 use crate::lib::{BTreeMap, Cow, HashMap, String, ToString, Vec};
+#[cfg(feature = "slice")]
 use crate::slice::{InvalidSlice, SliceIterator, TensorIndexer};
 use bincode::{Decode, Encode};
 use digest::Digest;
@@ -731,6 +732,7 @@ impl<'data> TensorView<'data> {
     }
 
     /// The various pieces of the data buffer according to the asked slice
+    #[cfg(feature = "slice")]
     pub fn sliced_data(
         &'data self,
         slices: &[TensorIndexer],
@@ -818,7 +820,7 @@ impl Dtype {
 mod tests {
 
     use super::*;
-    use crate::slice::IndexOp;
+
     use proptest::prelude::*;
     #[cfg(not(debug_assertions))]
     use sha1::Sha1;
@@ -828,6 +830,9 @@ mod tests {
     use sha3::Sha3_256;
     #[cfg(not(feature = "std"))]
     extern crate std;
+
+    #[cfg(feature = "slice")]
+    use crate::slice::IndexOp;
 
     const MAX_DIMENSION: usize = 8;
     const MAX_SIZE: usize = 8;
@@ -995,6 +1000,7 @@ mod tests {
         assert_eq!(tensor.data().as_ptr() as usize % tensor.dtype().size(), 0);
     }
 
+    #[cfg(feature = "slice")]
     #[test]
     fn test_slicing() {
         let data: Vec<u8> = vec![0.0f32, 1.0, 2.0, 3.0, 4.0, 5.0]

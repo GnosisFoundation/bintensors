@@ -4,6 +4,9 @@
 )]
 #![doc = include_str!("../DOC_README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(any(feature = "std", feature = "alloc"))]
+#[cfg(feature = "slice")]
 pub mod slice;
 pub mod tensor;
 /// serialize_to_file only valid in std
@@ -20,6 +23,8 @@ extern crate alloc;
 compile_error!("must choose either the `std` or `alloc` feature, but not both.");
 #[cfg(all(not(feature = "std"), not(feature = "alloc")))]
 compile_error!("must choose either the `std` or `alloc` feature");
+#[cfg(all(not(feature = "std"), not(feature = "alloc"), feature = "slice"))]
+compile_error!("must choose either the `std` or `alloc` feature to use the slice feature.");
 
 /// A facade around all the types we need from the `std`, `core`, and `alloc`
 /// crates. This avoids elaborate import wrangling having to happen in every

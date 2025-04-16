@@ -16,3 +16,5 @@ bincode = "2.0.1"
 
 [dependencies.bintensors]
 path = "../../bintensors"
+default-features = false
+features = ["std", "slice"]
