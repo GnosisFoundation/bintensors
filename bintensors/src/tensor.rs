@@ -423,9 +423,6 @@ impl<'data> BinTensors<'data> {
     /// let tensors = BinTensors::deserialize(&buffer).unwrap();
     /// let tensor = tensors
     ///         .tensor("weight_1");
-    /// // clean up files
-    ///
-    ///
     /// ```
     pub fn deserialize<'in_data>(buffer: &'in_data [u8]) -> Result<Self, BinTensorError>
     where
@@ -755,7 +752,6 @@ pub struct TensorInfo {
 }
 
 /// The various available dtypes. They MUST be in increasing alignment order
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Encode, Decode)]
 #[non_exhaustive]
 pub enum Dtype {
@@ -795,26 +791,37 @@ pub enum Dtype {
 
 impl Dtype {
     /// Gives out the size (in bytes) of 1 element of this dtype.
+    ///
+    /// # Reference Table
+    ///
+    /// | Dtype       | Size (bytes) |
+    /// |-------------|--------------|
+    /// | BOOL        | 1            |
+    /// | U8          | 1            |
+    /// | I8          | 1            |
+    /// | F8_E5M2     | 1            |
+    /// | F8_E4M3     | 1            |
+    /// | I16         | 2            |
+    /// | U16         | 2            |
+    /// | F16         | 2            |
+    /// | BF16        | 2            |
+    /// | I32         | 4            |
+    /// | U32         | 4            |
+    /// | F32         | 4            |
+    /// | I64         | 8            |
+    /// | U64         | 8            |
+    /// | F64         | 8            |
+    ///
     pub fn size(&self) -> usize {
         match self {
-            Dtype::BOOL => 1,
-            Dtype::U8 => 1,
-            Dtype::I8 => 1,
-            Dtype::F8_E5M2 => 1,
-            Dtype::F8_E4M3 => 1,
-            Dtype::I16 => 2,
-            Dtype::U16 => 2,
-            Dtype::I32 => 4,
-            Dtype::U32 => 4,
-            Dtype::I64 => 8,
-            Dtype::U64 => 8,
-            Dtype::F16 => 2,
-            Dtype::BF16 => 2,
-            Dtype::F32 => 4,
-            Dtype::F64 => 8,
+            Dtype::BOOL | Dtype::U8 | Dtype::I8 | Dtype::F8_E5M2 | Dtype::F8_E4M3 => 1,
+            Dtype::I16 | Dtype::U16 | Dtype::F16 | Dtype::BF16 => 2,
+            Dtype::I32 | Dtype::F32 | Dtype::U32 => 4,
+            Dtype::I64 | Dtype::U64 | Dtype::F64 => 8,
         }
     }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -1474,17 +1481,15 @@ mod tests {
 
     #[test]
     fn test_out() {
-        let buffer: [u8; 24] = [
-            16, 0, 0, 0, 0, 0, 0, 0, 1, 43, 253, 0, 255, 255, 255, 255, 255, 255, 255, 4, 45, 168,
-            0, 245,
-        ];
+        let mut v1: Vec<u8> = vec![0, 1, 2, 3];
+        let v2: Vec<u8> = vec![5, 6, 7, 8];
 
-        let arr: [u8; 8] = [
-            buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7],
-        ];
+        v1.iter_mut().zip(v2.iter()).for_each(|(x1, x2)| *x1 ^= *x2);
 
-        let size = usize::from_le_bytes(arr);
-        assert!(size < usize::MAX);
-        // let tensors = BinTensors::deserialize(&buffer).unwrap();
+        println!("{:?}", v1.iter().sum::<u8>());
+
+        for v in v1 {
+            println!("{:#04b}", v);
+        }
     }
 }
