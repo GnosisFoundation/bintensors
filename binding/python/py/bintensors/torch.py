@@ -289,9 +289,6 @@ def save_iter(tensors: Dict[str, torch.Tensor], metadata: Optional[Dict[str, str
     ```
     """
 
-
-# TODO: since this is io bound we want to utilize threading, either
-# within here or within the binding of rust.
 def save_with_checksum(
     tensor_dict: Dict[str, torch.Tensor],
     metadata: Optional[Dict[str, str]] = None,
