@@ -20,8 +20,6 @@ const OFFSET: usize = 8;
 pub enum BinTensorError {
     /// The header is an invalid UTF-8 string and cannot be read.
     InvalidHeader,
-    /// The header's first byte is not the expected `{`.
-    InvalidHeaderStart,
     /// The header is large than 100Mo which is considered too large (Might evolve in the future).
     HeaderTooLarge,
     /// The header is smaller than 8 bytes
