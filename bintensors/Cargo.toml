@@ -1,6 +1,6 @@
 [package]
 name = "bintensors"
-version = "0.1.1-dev"
+version = "0.1.1"
 edition = "2024"
 license = "MIT"
 rust-version = "1.85"
