@@ -493,6 +493,11 @@ impl<'data> BinTensors<'data> {
         self.metadata.index_map.keys().collect()
     }
 
+    /// Returns a reference to the metadata header of the BinTensors file.
+    pub fn metadata(&self) -> &'_ Metadata {
+        &self.metadata
+    }
+
     /// Return how many tensors are currently stored within the BinTensors.
     #[inline]
     pub fn len(&self) -> usize {
@@ -821,7 +826,6 @@ impl Dtype {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
