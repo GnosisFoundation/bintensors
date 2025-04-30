@@ -263,32 +263,6 @@ def save(tensors: Dict[str, torch.Tensor], metadata: Optional[Dict[str, str]] = 
     return result
 
 
-def save_iter(tensors: Dict[str, torch.Tensor], metadata: Optional[Dict[str, str]] = None):
-    """
-    Saves a dictionary of tensors into raw bytes in bintensors format.
-
-    Args:
-        tensors (`Dict[str, torch.Tensor]`):
-            The incoming tensors. Tensors need to be contiguous and dense.
-        metadata (`Dict[str, str]`, *optional*, defaults to `None`):
-            Optional text only metadata you might want to save in your header.
-            For instance it can be useful to specify more about the underlying
-            tensors. This is purely informative and does not affect tensor loading.
-
-    Returns:
-        `bytes`: The raw bytes representing the format
-
-    Example:
-
-    ```python
-    from bintensors.torch import save_iter
-    import torch
-
-    tensors = {"embedding": torch.zeros((512, 1024)), "attention": torch.zeros((256, 256))}
-    buffer = save_iter(tensors)
-    ```
-    """
-
 def save_with_checksum(
     tensor_dict: Dict[str, torch.Tensor],
     metadata: Optional[Dict[str, str]] = None,
@@ -459,6 +433,7 @@ def _getdtype(dtype_str: str) -> Optional[torch.dtype]:
 
 
 def _view2torch(safeview) -> Dict[str, torch.Tensor]:
+    """"""
     result = {}
     for k, v in safeview:
         dtype = _getdtype(v["dtype"])
