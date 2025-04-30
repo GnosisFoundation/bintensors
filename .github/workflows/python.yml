@@ -86,7 +86,6 @@ jobs:
           pip install .[quality]
           black --check --line-length 119 --target-version py35 py/bintensors
 
-    # TODO: uncomment this after adding formal pytest
       - name: Run tests
         run: |
           cargo test
