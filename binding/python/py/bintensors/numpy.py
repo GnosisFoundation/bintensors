@@ -14,10 +14,17 @@ except ImportError:
 
 from bintensors import deserialize, safe_open, serialize, serialize_file
 
-__all__ = ["save", "save_file", "load", "load_file"]
+__all__ = ["save", "save_file", "load", "load_file", "save_with_checksum"]
 
 
 def _tobytes(tensor: np.ndarray) -> bytes:
+    """
+    tensor (`np.ndarray`):
+            Tensors need to be contiguous and dense.
+
+    Returns:
+        `bytes` : byte repersentation of the numpy array data type object.
+    """
     if not _is_little_endian(tensor):
         tensor = tensor.byteswap(inplace=False)
     return tensor.tobytes()
@@ -195,10 +202,30 @@ _TYPES = {
 
 
 def _getdtype(dtype_str: str) -> np.dtype:
+    """
+    map bintensors string to numpy data type.
+
+    Args:
+        dtype_str (`str`):
+            string repersentation of the `np.dtype`.
+
+    Returns:
+        `np.dtype`: data type repersentation of the tensors object.
+    """
     return _TYPES[dtype_str]
 
 
 def _view2np(safeview) -> Dict[str, np.ndarray]:
+    """
+    Convert a view to a numpy array object
+
+    Args:
+        safeview (`Dict[str, Union[bytes, str, Tuple[int,...]]]`)
+            object view of the tensors within the bintensor file format
+
+    Returns:
+        `Dict[str, np.ndarray]`: dictionary of layer, and numpy array objects.
+    """
     result = {}
     for k, v in safeview:
         dtype = _getdtype(v["dtype"])
@@ -208,6 +235,16 @@ def _view2np(safeview) -> Dict[str, np.ndarray]:
 
 
 def _is_little_endian(tensor: np.ndarray) -> bool:
+    """
+    Check the byte order is a little-endian of the tensors
+
+    Args:
+        tensor (`np.ndarray`):
+            numpy data array tensor object.
+
+    Returns:
+        `bool`: True if the tensor ``object.dtype.byteorder`` is laid out little endian.
+    """
     byteorder = tensor.dtype.byteorder
     if byteorder == "=":
         if sys.byteorder == "little":

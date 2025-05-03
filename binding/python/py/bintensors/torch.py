@@ -16,10 +16,19 @@ except ImportError:
         "Could not find the 'torch' module. To use this part of the package, please install torch: `pip install torch`."
     )
 
-__all__ = ["save_model", "save", "save_file", "load_model", "load", "load_file"]
+__all__ = ["save_model", "save", "save_file", "load_model", "load", "load_file", "save_with_checksum"]
 
 
 def storage_ptr(tensor: torch.Tensor) -> int:
+    """obtain the pointer in memeory of the tensor data structure
+
+    Args:
+        tensor (`torch.Tensor`):
+            The tensors data types of matrix objects.
+
+    Returns:
+        `int`: ptr location of the stored matrix.
+    """
     try:
         return tensor.untyped_storage().data_ptr()
     except Exception:
@@ -32,6 +41,17 @@ def storage_ptr(tensor: torch.Tensor) -> int:
 
 
 def _end_ptr(tensor: torch.Tensor) -> int:
+    """
+    obtain the end pointer in memeory of the tensor data structure
+
+    Args:
+        tensor (`torch.Tensor`):
+            The tensors data types of matrix objects.
+
+    Returns:
+        `int`: ptr location of the stored matrix.
+
+    """
     if tensor.nelement():
         stop = tensor.view(-1)[-1].data_ptr() + _SIZE[tensor.dtype]
     else:
@@ -40,6 +60,16 @@ def _end_ptr(tensor: torch.Tensor) -> int:
 
 
 def storage_size(tensor: torch.Tensor) -> int:
+    """
+    obtain the the number of bytes within the storage of the tensor
+
+    Args:
+        tensor (`torch.Tensor`):
+            The tensors data types of matrix objects.
+
+    Returns:
+        `int`: total number of bytes.
+    """
     try:
         return tensor.untyped_storage().nbytes()
     except AttributeError:
@@ -53,6 +83,7 @@ def storage_size(tensor: torch.Tensor) -> int:
 
 
 def _filter_shared_not_shared(tensors: List[Set[str]], state_dict: Dict[str, torch.Tensor]) -> List[Set[str]]:
+    """"""
     filtered_tensors = []
     for shared in tensors:
         if len(shared) < 2:
@@ -89,6 +120,23 @@ def _find_shared_tensors(state_dict: Dict[str, torch.Tensor]) -> List[Set[str]]:
 
 
 def _is_complete(tensor: torch.Tensor) -> bool:
+    """
+    Check if the tensors data type is "complete"
+
+    Definition:
+        A tensor is complete if it falls under all posed cases.
+
+        Case(s)
+            i. The data pointer of tensors is equal to the storage pointer
+            ii. The number of elements multiplied by its data type size is equal to the storage size
+
+    Args:
+       tensor (`torch.Tensor`):
+               The tensors data types of matrix objects.
+
+    Returns:
+        `bool`: check if the tensors is "complete"
+    """
     return tensor.data_ptr() == storage_ptr(tensor) and tensor.nelement() * _SIZE[tensor.dtype] == storage_size(tensor)
 
 
@@ -98,6 +146,21 @@ def _remove_duplicate_names(
     preferred_names: Optional[List[str]] = None,
     discard_names: Optional[List[str]] = None,
 ) -> Dict[str, List[str]]:
+    """
+    Remove duplicate names within the state_dict, since bintensors do not support mapping to more
+    then more than two names.
+
+    Args:
+        state_dict (`Dict[str, torch.Tensor]`):
+            The incoming tensors. Tensors need to be contiguous and dense.
+        preferred_names (`List[str]  *optional*, defaults to None or []`)
+            Names that are preferred over others.
+        discard_names (`List[str]  *optional*, defaults to None or []`)
+            Names that will be discarded.
+
+    Returns:
+        `Dict[str, List[str]]`: list candidate of layers that will be removed from the state_dict
+    """
     if preferred_names is None:
         preferred_names = []
     preferred_names = set(preferred_names)
@@ -509,6 +572,23 @@ def _tobytes(tensor: torch.Tensor, name: str) -> bytes:
 
 
 def _flatten(tensors: Dict[str, torch.Tensor]) -> Dict[str, Dict[str, Any]]:
+    """
+    Flatten the state_dict into a readable format for the rust binding to map to serialized format.
+
+    Args:
+        tensors (`Dict[str, torch.Tensor]`)
+
+
+    ### Example
+    ```
+    import torch
+    from bintensors.torch import _flatten
+
+    tensors = { "ln.weight" : torch.zeros((2,2), dtype=torch.int8) }
+    flatten_t = _flatten(tensors)
+    assert {'ln.weight': {'dtype': 'int8', 'shape': torch.Size([2, 2]), 'data': b'\x00\x00\x00\x00'}} == flatten_t
+    ```
+    """
     if not isinstance(tensors, dict):
         raise ValueError(f"Expected a dict of [str, torch.Tensor] but received {type(tensors)}")
 
