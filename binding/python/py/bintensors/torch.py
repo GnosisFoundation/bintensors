@@ -61,14 +61,14 @@ def _end_ptr(tensor: torch.Tensor) -> int:
 
 def storage_size(tensor: torch.Tensor) -> int:
     """
-    obtain the the number of bytes within the storage of the tensor
+    Returns the number of bytes occupied by the storage of a tensor.
 
     Args:
         tensor (`torch.Tensor`):
-            The tensors data types of matrix objects.
+            The tensor whose underlying storage size is to be measured.
 
     Returns:
-        `int`: total number of bytes.
+        `int`: Total number of bytes used by the tensor's storage.
     """
     try:
         return tensor.untyped_storage().nbytes()
@@ -83,32 +83,64 @@ def storage_size(tensor: torch.Tensor) -> int:
 
 
 def _filter_shared_not_shared(tensors: List[Set[str]], state_dict: Dict[str, torch.Tensor]) -> List[Set[str]]:
-    """"""
+    """
+    Filters sets of shared tensor names to distinguish between truly shared and merely adjacent tensors in memory.
+
+    Args:
+        tensors (`List[Set[str]]`):
+            A list of sets, where each set contains keys from the `state_dict` suspected to share storage.
+
+        state_dict (`Dict[str, torch.Tensor]`):
+            Dictionary representation of a model's parameters.
+
+    Returns:
+        `List[Set[str]]`: A filtered list of sets representing truly shared tensors.
+    """
+    # append filter_tensors that contain more then 2 shared layers
     filtered_tensors = []
     for shared in tensors:
+        # skip layers with only 1 layer
         if len(shared) < 2:
             filtered_tensors.append(shared)
             continue
 
+        # loop though each individual layer
         areas = []
         for name in shared:
             tensor = state_dict[name]
+            # append where it the tensors points, and it's name
             areas.append((tensor.data_ptr(), _end_ptr(tensor), name))
+        # sort by set partial order
         areas.sort()
 
+        # check if pointer are layerout one after the other
         _, last_stop, last_name = areas[0]
         filtered_tensors.append({last_name})
         for start, stop, name in areas[1:]:
+            # if the start is greter then and equal to the last stop
+            # append name
             if start >= last_stop:
                 filtered_tensors.append({name})
             else:
+                # add name to the end of the list
                 filtered_tensors[-1].add(name)
             last_stop = stop
 
+    # return list of names of filtered tensors
     return filtered_tensors
 
 
 def _find_shared_tensors(state_dict: Dict[str, torch.Tensor]) -> List[Set[str]]:
+    """
+    Identifies groups of parameters in the state_dict that share underlying storage.
+
+    Args:
+        state_dict (`Dict[str, torch.Tensor]`):
+            Dictionary representation of a model's parameters.
+
+    Returns:
+        `List[Set[str]]`: A list of sets, where each set contains names of tensors sharing the same storage.
+    """
     tensors = defaultdict(set)
     for k, v in state_dict.items():
         if v.device != torch.device("meta") and storage_ptr(v) != 0 and storage_size(v) != 0:
@@ -492,11 +524,30 @@ _TYPES = {
 
 
 def _getdtype(dtype_str: str) -> Optional[torch.dtype]:
+    """
+    map bintensors string to torch data type.
+
+    Args:
+        dtype_str (`str`):
+            string repersentation of the `torch.dtype`.
+
+    Returns:
+        `Optional[torch.dtype]`: data type repersentation of the tensors object, if such dtype does not exist retrun None.
+    """
     return _TYPES.get(dtype_str, None)
 
 
 def _view2torch(safeview) -> Dict[str, torch.Tensor]:
-    """"""
+    """
+    Convert a view to a torch Tensors object
+
+    Args:
+        safeview (`Dict[str, Union[bytes, str, Tuple[int,...]]]`)
+            object view of the tensors within the bintensor file format
+
+    Returns:
+        `Dict[str, torch.Tensors]`: dictionary of layer, and torch Tensors data structure.
+    """
     result = {}
     for k, v in safeview:
         dtype = _getdtype(v["dtype"])
@@ -576,8 +627,12 @@ def _flatten(tensors: Dict[str, torch.Tensor]) -> Dict[str, Dict[str, Any]]:
     Flatten the state_dict into a readable format for the rust binding to map to serialized format.
 
     Args:
-        tensors (`Dict[str, torch.Tensor]`)
+        tensors (`Dict[str, torch.Tensor]`):
+            The incoming tensors. Tensors need to be contiguous and dense.
 
+
+    Returns:
+        `Dict[str, Dict[str, Any]]`: dictionary object of the layers within the state dict with metadata for serializing in bintensors.
 
     ### Example
     ```

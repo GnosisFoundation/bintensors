@@ -19,11 +19,14 @@ __all__ = ["save", "save_file", "load", "load_file", "save_with_checksum"]
 
 def _tobytes(tensor: np.ndarray) -> bytes:
     """
-    tensor (`np.ndarray`):
-            Tensors need to be contiguous and dense.
+    Converts a `np.ndarray` into a raw little-endian byte representation.
+
+    Args:
+        tensor (`np.ndarray`):
+            A dense and contiguous NumPy array.
 
     Returns:
-        `bytes` : byte repersentation of the numpy array data type object.
+        `bytes`: A byte representation of the array's data in little-endian order.
     """
     if not _is_little_endian(tensor):
         tensor = tensor.byteswap(inplace=False)
@@ -201,18 +204,18 @@ _TYPES = {
 }
 
 
-def _getdtype(dtype_str: str) -> np.dtype:
+def _getdtype(dtype_str: str) -> Optional[np.dtype]:
     """
-    map bintensors string to numpy data type.
+    Map bintensors string to numpy data type.
 
     Args:
         dtype_str (`str`):
             string repersentation of the `np.dtype`.
 
     Returns:
-        `np.dtype`: data type repersentation of the tensors object.
+        `Optional[np.dtype]`: data type repersentation of the tensors object, if such dtype does not exist retrun None.
     """
-    return _TYPES[dtype_str]
+    return _TYPES.get(dtype_str, None)
 
 
 def _view2np(safeview) -> Dict[str, np.ndarray]:
