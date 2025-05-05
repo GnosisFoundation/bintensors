@@ -112,7 +112,8 @@ def save_with_checksum(
             Optional text only metadata you might want to save in your header.
             For instance it can be useful to specify more about the underlying
             tensors. This is purely informative and does not affect tensor loading.
-        hasher
+        hasher (`Callable[[bytes], HASH]`):
+            A hash is an object used to calculate a checksum of a string of information.
 
     Returns:
         `bytes`: The raw bytes representing the format
