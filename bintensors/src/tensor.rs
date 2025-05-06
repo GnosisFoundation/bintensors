@@ -1481,17 +1481,4 @@ mod tests {
         )
     }
 
-    #[test]
-    fn test_out() {
-        let mut v1: Vec<u8> = vec![0, 1, 2, 3];
-        let v2: Vec<u8> = vec![5, 6, 7, 8];
-
-        v1.iter_mut().zip(v2.iter()).for_each(|(x1, x2)| *x1 ^= *x2);
-
-        println!("{:?}", v1.iter().sum::<u8>());
-
-        for v in v1 {
-            println!("{:#04b}", v);
-        }
-    }
 }
