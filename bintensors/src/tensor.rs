@@ -309,9 +309,63 @@ pub struct DigestBuffer {
 /// with a checksum idendity
 ///
 /// ```
-/// use sha1::Sha1;
+/// use sha3::Digest;
+/// use sha3::Sha3_256;
+/// use std::collections::HashMap;
+/// use bintensors::{Dtype, tensor::{DigestBuffer,TensorView, Metadata}, serialize_with_checksum};
 ///
+/// let n_heads = 5;
+///         let mut tensors_desc = vec![];
+///         tensors_desc.push(("wte".to_string(), vec![50257, 768]));
+///         tensors_desc.push(("wpe".to_string(), vec![1024, 768]));
+///         for i in 0..n_heads {
+///             tensors_desc.push((format!("h.{i}.ln_1.weight"), vec![768]));
+///             tensors_desc.push((format!("h.{i}.ln_1.bias"), vec![768]));
+///             tensors_desc.push((format!("h.{i}.attn.bias"), vec![1, 1, 1024, 1024]));
+///             tensors_desc.push((format!("h.{i}.attn.c_attn.weight"), vec![768, 2304]));
+///             tensors_desc.push((format!("h.{i}.attn.c_attn.bias"), vec![2304]));
+///             tensors_desc.push((format!("h.{i}.attn.c_proj.weight"), vec![768, 768]));
+///             tensors_desc.push((format!("h.{i}.attn.c_proj.bias"), vec![768]));
+///             tensors_desc.push((format!("h.{i}.ln_2.weight"), vec![768]));
+///             tensors_desc.push((format!("h.{i}.ln_2.bias"), vec![768]));
+///             tensors_desc.push((format!("h.{i}.mlp.c_fc.weight"), vec![768, 3072]));
+///             tensors_desc.push((format!("h.{i}.mlp.c_fc.bias"), vec![3072]));
+///             tensors_desc.push((format!("h.{i}.mlp.c_proj.weight"), vec![3072, 768]));
+///             tensors_desc.push((format!("h.{i}.mlp.c_proj.bias"), vec![768]));
+///         }
+///         tensors_desc.push(("ln_f.weight".to_string(), vec![768]));
+///         tensors_desc.push(("ln_f.bias".to_string(), vec![768]));
 ///
+///        let dtype = Dtype::F32;
+///         let n: usize = tensors_desc
+///             .iter()
+///             .map(|(_, shape)| shape.iter().product::<usize>())
+///             .sum::<usize>()
+///             * dtype.size(); // 4
+///         let all_data = vec![0; n]; // Make `all_data` a `Vec<u8>`
+///         let mut metadata: HashMap<String, TensorView<'_>> =
+///             HashMap::with_capacity(tensors_desc.len());
+///         let mut offset = 0;
+///
+///         // Adjust this loop to use owned data properly
+///         for (name, shape) in tensors_desc {
+///             let n: usize = shape.iter().product();
+///             let buffer = &all_data[offset..offset + n * dtype.size()];
+///             let tensor = TensorView::new(dtype, shape, buffer).unwrap();
+///             metadata.insert(name, tensor);
+///             offset += n;
+///         }
+///
+///         let hasher = Sha3_256::new();
+///         let DigestBuffer { checksum, .. } =
+///             serialize_with_checksum(metadata, &None, hasher).unwrap();
+///         assert_eq!(
+///             checksum,
+///             &[
+///                 49, 8, 133, 128, 137, 157, 0, 20, 99, 208, 176, 9, 60, 147, 117, 232, 12, 239, 55,
+///                 90, 103, 195, 21, 235, 62, 6, 242, 39, 129, 122, 89, 21
+///             ]
+///         )
 /// ```
 pub fn serialize_with_checksum<
     S: AsRef<str> + Ord + core::fmt::Display,
@@ -1480,5 +1534,4 @@ mod tests {
             ]
         )
     }
-
 }
