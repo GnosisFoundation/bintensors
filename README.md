@@ -12,6 +12,7 @@
     <a href="https://docs.rs/bintensors"><img alt="docs.rs" src="https://img.shields.io/badge/rust-docs.rs-lightgray?logo=rust&logoColor=orange"></a>
     <a href="https://pypi.org/project/bintensors/"><img alt="PyPI" src="https://img.shields.io/pypi/v/bintensors"></a>
     <a href="https://pypi.org/project/bintensors/"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/bintensors?logo=python"></a>
+    <a href="https://pepy.tech/projects/bintensors"><img src="https://static.pepy.tech/badge/bintensors" alt="PyPI Downloads"></a>
 </p>
 
 
