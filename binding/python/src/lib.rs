@@ -218,6 +218,16 @@ fn deserialize(py: Python, bytes: &[u8]) -> PyResult<Vec<(String, HashMap<String
     }
     Ok(items)
 }
+
+#[pyfunction]
+#[pyo3(signature = (buffer))]
+fn _validate(buffer: &[u8]) -> PyResult<bool> {
+    BinTensors::read_metadata(buffer)
+        .map_err(|e| BinTensorError::new_err(format!("Error while deserializing: {e:?}")))?;
+
+    Ok(true)
+}
+
 fn slice_to_indexer(
     (dim_idx, (slice_index, dim)): (usize, (SliceIndex, usize)),
 ) -> Result<TensorIndexer, PyErr> {
@@ -1228,8 +1238,8 @@ pyo3::create_exception!(
 fn _bintensors_rs(m: &PyBound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(serialize, m)?)?;
     m.add_function(wrap_pyfunction!(serialize_file, m)?)?;
-    // m.add_function(wrap_pyfunction!(serialize_checksum, m)?)?;
     m.add_function(wrap_pyfunction!(deserialize, m)?)?;
+    m.add_function(wrap_pyfunction!(_validate, m)?)?;
     m.add_class::<safe_open>()?;
     m.add("BintensorError", m.py().get_type::<BinTensorError>())?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
