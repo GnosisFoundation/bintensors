@@ -61,7 +61,7 @@ class safe_open:
 
         framework (`str`):
             The framework you want you tensors in. Supported values:
-            `pt`, `numpy`.
+             `pt`, `tf`, `flax`, `numpy`, `mlx`.
 
         device (`str`, defaults to `"cpu"`):
             The device on which you want the tensors.
