@@ -127,6 +127,7 @@ def load_file(filename: Union[str, os.PathLike]) -> Dict[str, Array]:
             result[k] = f.get_tensor(k)
     return result
 
+
 def save_with_checksum(
     tensor_dict: Dict[str, Array],
     metadata: Optional[Dict[str, str]] = None,
@@ -161,7 +162,6 @@ def save_with_checksum(
     """
     np_tensors = _jnp2np(tensor_dict)
     return numpy.save_with_checksum(np_tensors, metadata, hasher)
-
 
 
 def _np2jnp(numpy_dict: Dict[str, np.ndarray]) -> Dict[str, Array]:

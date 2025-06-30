@@ -6,7 +6,8 @@ from typing import Union
 
 __all__ = ["is_btfile"]
 
-def is_btfile(name : Union[os.PathLike, str, bytes, io.BufferedReader]):
+
+def is_btfile(name: Union[os.PathLike, str, bytes, io.BufferedReader]):
     """
 
      Return True if `name` is a valid bintensors file or buffer, else False.

@@ -10,6 +10,7 @@ from bintensors import numpy, safe_open
 
 __all__ = ["save", "save_file", "load", "load_file", "save_with_checksum"]
 
+
 def save(tensors: Dict[str, mx.array], metadata: Optional[Dict[str, str]] = None) -> bytes:
     """
     Saves a dictionary of tensors into raw bytes in bintensors format.

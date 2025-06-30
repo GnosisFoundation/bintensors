@@ -40,6 +40,7 @@ def create_gpt2_numpy_dict(n_layers: int) -> Dict[str, mlx.array]:
     tensors["ln_f.bias"] = mlx.zeros((768))
     return tensors
 
+
 def test_save_and_load_gpt2_tensors_dict_mlx():
     small_gpt2 = create_gpt2_numpy_dict(2)
     buffer = save(small_gpt2)

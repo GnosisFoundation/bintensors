@@ -375,7 +375,7 @@ def save_with_checksum(
             tensors. This is purely informative and does not affect tensor loading.
         hasher (`Callable[[bytes], HASH]`):
             A hash is an object used to calculate a checksum of a string of information.
-            
+
     Returns:
         `bytes`: The raw bytes representing the format
 

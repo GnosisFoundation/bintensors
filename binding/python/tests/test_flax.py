@@ -144,7 +144,10 @@ def test_safe_open_access_with_metadata_jax():
 
 
 def test_checksum_two_diffrent_models_jax():
-    model_1 = {"ln.weight": random.uniform(key=random.PRNGKey(42), shape=(10, 10)), "ln.bias": random.uniform(key=random.PRNGKey(42), shape=(10,))}
+    model_1 = {
+        "ln.weight": random.uniform(key=random.PRNGKey(42), shape=(10, 10)),
+        "ln.bias": random.uniform(key=random.PRNGKey(42), shape=(10,)),
+    }
     model_2 = {"ln.weight": jax.ones(shape=(10, 10)), "ln.bias": jax.ones(shape=(10,))}
 
     checksum1, _ = save_with_checksum(model_1)

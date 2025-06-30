@@ -73,7 +73,7 @@ def save_file(
     Args:
         tensor_dict (`Dict[str, np.ndarray]`):
             The incoming tensors. Tensors need to be contiguous and dense.
-        filename (`str`, or `os.PathLike`)):
+        filename (`str`, or `os.PathLike`):
             The filename we're saving into.
         metadata (`Dict[str, str]`, *optional*, defaults to `None`):
             Optional text only metadata you might want to save in your header.
