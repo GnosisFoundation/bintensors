@@ -76,7 +76,7 @@ def save_file(
 
 
 def save_with_checksum(
-    tensor_dict: Dict[str, np.ndarray],
+    tensor_dict: Dict[str, mx.array],
     metadata: Optional[Dict[str, str]] = None,
     hasher: Callable[[bytes], HASH] = hashlib.sha1,
 ) -> Tuple[bytes, bytes]:
