@@ -13,11 +13,11 @@ def is_btfile(name: Union[os.PathLike, str, bytes, io.BufferedReader]):
      Return True if `name` is a valid bintensors file or buffer, else False.
 
     Args:
-        name (`str`, `os.PathLike`, `bytes`, or file object):
-            A path to a file, a file-like object, or a bytes buffer to test.
+        name (`str`, `os.PathLike`, `bytes`, or `BufferedReader`):
+            A path to a file, a file-like object, or a bytes buffer.
 
     Returns:
-        (`bool`): True if it's a valid LZ4 frame, False otherwise.
+        (`bool`): True if it's a valid bintensors file, False otherwise.
     """
     try:
         if isinstance(name, bytes):
