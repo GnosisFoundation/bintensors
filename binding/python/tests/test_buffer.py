@@ -2,7 +2,7 @@ import pytest
 import struct
 
 import torch
-from typing import List, Dict, Tuple
+from typing import Tuple
 from itertools import chain
 
 from bintensors import BintensorError

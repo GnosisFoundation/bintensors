@@ -137,7 +137,7 @@ def test_safe_open_access_with_metadata_jax():
         filename = tmp.name
 
         save_file(tensor_dict, filename, metadata={"hello": "world"})
-        with safe_open(filename, "numpy") as model:
+        with safe_open(filename, "flax") as model:
             assert model.get_tensor("h.0.ln_1.weight") is not None
             assert model.get_tensor("h.0.ln_1.bias") is not None
             assert model.metadata()["hello"] == "world"

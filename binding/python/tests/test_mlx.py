@@ -1,10 +1,8 @@
 import pytest
 
 import tempfile
-import numpy as np
 
 import mlx.core as mlx
-
 
 from typing import Dict, Tuple
 from bintensors.mlx import load, load_file, save, save_file, safe_open, save_with_checksum
