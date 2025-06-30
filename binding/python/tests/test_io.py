@@ -1,5 +1,5 @@
 import torch
-from bintensors import is_btfile
+from bintensors.io import is_btfile
 from bintensors.torch import save, save_file
 
 import tempfile
